@@ -1,0 +1,33 @@
+# Local dependencies and generated build output
+**/node_modules
+dist
+build
+coverage
+
+# Umi and bundler caches
+.umi
+.umi-*
+.turbopack
+.temp
+.wrangler
+
+# Local tooling and repository metadata
+.git
+.vercel
+.agents
+.claude
+.github
+.husky
+.worktrees
+.history
+.idea
+.vscode
+
+# Non-deployable workspace material
+cloudflare-worker
+docs
+tests
+screenshot
+*.log
+.DS_Store
+.env*

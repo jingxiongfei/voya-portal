@@ -1,0 +1,230 @@
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*1GSgSYDD_aIAAAAAQsAAAAgAegCCAQ/AlibabaSans-Light.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*2zEUQqnPNesAAAAAQtAAAAgAegCCAQ/AlibabaSans-Regular.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Medium.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Bold.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "AlibabaSans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("//mdn.alipayobjects.com/huamei_iwk9zp/afts/file/A*E_cxRbMlZqUAAAAAQuAAAAgAegCCAQ/AlibabaSans-Heavy.woff2")
+    format("woff2");
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family:
+    AlibabaSans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+// Keep document scrolling available while removing the page-edge scrollbar.
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+// Add restrained edge resistance only to explicitly marked detail content.
+// Global navigation and page headers remain stable.
+.voya-elastic-scroll-target {
+  transform: translate3d(
+    0,
+    var(--voya-elastic-scroll-offset, 0),
+    0
+  );
+  transform-origin: center;
+  transition: transform var(--ant-motion-duration-slow, 0.3s)
+    var(
+      --ant-motion-ease-out-back,
+      cubic-bezier(0.12, 0.4, 0.29, 1.46)
+    );
+}
+
+html[data-voya-elastic-scroll-state='pulling']
+  .voya-elastic-scroll-target {
+  transition: none;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voya-elastic-scroll-target {
+    transform: none;
+    transition: none;
+  }
+}
+
+.colorWeak {
+  filter: invert(80%);
+}
+
+.ant-layout {
+  min-height: 100vh;
+}
+.ant-pro-sider.ant-layout-sider.ant-pro-sider-fixed {
+  left: unset;
+}
+
+.ant-pro-layout .ant-pro-sider .ant-layout-sider-children {
+  margin-inline-end: 0;
+  border-inline-end: none;
+}
+
+// The global header and navigation rail form one continuous navigation
+// surface; the gray content canvas provides the needed separation.
+.ant-pro-layout .ant-layout-header.ant-pro-layout-header {
+  border-block-end: none;
+}
+
+// Keep account identity before the global settings and language controls.
+.ant-pro-layout .ant-pro-global-header-header-actions-avatar {
+  order: -1;
+}
+
+.ant-pro-layout .ant-pro-global-header-logo img {
+  width: auto;
+  height: 40px;
+  max-width: 200px;
+  object-fit: contain;
+}
+
+// ProComponents fixes the breadcrumb before the heading in its DOM and does
+// not expose a placement prop. Reorder the shared PageContainer header so all
+// business pages consistently present the title first and its path second.
+.ant-pro-layout .ant-pro-page-container-warp-page-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-pro-layout .ant-pro-page-container-warp-page-header .ant-page-header-heading {
+  order: 1;
+}
+
+.ant-pro-layout .ant-pro-page-container-warp-page-header .ant-page-header-breadcrumb {
+  order: 2;
+  margin-block-start: 4px;
+}
+
+.ant-pro-layout
+  .ant-pro-page-container-warp-page-header
+  .ant-page-header-breadcrumb
+  + .ant-page-header-heading {
+  margin-block-start: 0;
+}
+
+.ant-pro-layout .ant-pro-page-container-warp-page-header .ant-page-header-content {
+  order: 3;
+}
+
+.ant-pro-layout .ant-pro-page-container-warp-page-header .ant-page-header-footer {
+  order: 4;
+}
+
+// Reveal the navigation surface through a compact rounded transition where the
+// fixed header, sider and page canvas meet.
+.ant-pro-layout .ant-pro-layout-container {
+  --voya-global-header-height: 56px;
+  --voya-content-start-radius: 24px;
+  --voya-navigation-surface: #e6edf5;
+}
+
+.ant-pro-layout .ant-pro-layout-container::before {
+  position: absolute;
+  inset-block-start: var(--voya-global-header-height);
+  inset-inline-start: 0;
+  z-index: 0;
+  width: var(--voya-content-start-radius);
+  height: var(--voya-content-start-radius);
+  background: var(--voya-navigation-surface);
+  content: '';
+  pointer-events: none;
+}
+
+.ant-pro-layout .ant-pro-layout-container > .ant-pro-layout-content {
+  z-index: 1;
+  background: #f5f5f5;
+  border-start-start-radius: var(--voya-content-start-radius);
+}
+
+// Keep the ProLayout collapse control inside the bottom of the navigation
+// rail, away from both the page divider and the first menu item.
+.ant-pro-sider .ant-pro-sider-collapsed-button {
+  inset-block-start: auto;
+  inset-block-end: 24px;
+  inset-inline-end: 24px;
+  color: #475467;
+  background: #e6edf5;
+  border: 1px solid #ccd8e5;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.ant-pro-sider .ant-pro-sider-collapsed-button:hover {
+  color: #155eef;
+  background: #d8e3ef;
+  box-shadow: none;
+}
+
+.ant-pro-sider-collapsed .ant-pro-sider-link span:not([role='img']) {
+  display: none;
+}
+
+canvas {
+  display: block;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+@media (max-width: 768px) {
+  .ant-table {
+    width: 100%;
+    overflow-x: auto;
+    &-thead > tr,
+    &-tbody > tr {
+      > th,
+      > td {
+        white-space: pre;
+        > span {
+          display: block;
+        }
+      }
+    }
+  }
+}
