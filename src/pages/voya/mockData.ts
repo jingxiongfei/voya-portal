@@ -81,7 +81,16 @@ export type UserTagRecord = {
   updatedAt: string;
 };
 
-export type VehicleOrderStatus = 'pendingPayment' | 'paid';
+export type VehicleOrderStatus =
+  | 'pendingPayment'
+  | 'matching'
+  | 'onHold'
+  | 'unpaid'
+  | 'cancelled'
+  | 'voided'
+  | 'pendingTravel'
+  | 'inTravel'
+  | 'completed';
 
 export type VehicleOrderRecord = {
   id: string;
@@ -98,6 +107,7 @@ export type VehicleOrderRecord = {
   orderedAt: string;
   status: VehicleOrderStatus;
   paymentTimeRemaining?: string;
+  paymentDeadline?: string;
 };
 
 export type VehiclePaymentMethod =
@@ -142,6 +152,49 @@ export type VehiclePaymentRecord = {
   transactionId: string;
 };
 
+export type VehicleGuideQuoteRecord = {
+  id: string;
+  guideId: string;
+  guideName: string;
+  vehicle: {
+    registrationNumber: string;
+    brand: string;
+    model: string;
+    seatCount: number;
+    luggageCount: number;
+  };
+  priceCny: number;
+};
+
+export type VehicleProcurementFulfillmentRecord = {
+  purchasePriceCny: number;
+  guide: {
+    name: string;
+    age: number;
+    gender: Gender;
+    nationality: string;
+    serviceRating: number;
+    countryCode: string;
+    phone: string;
+    whatsApp: string;
+  };
+  vehicle: {
+    registrationNumber: string;
+    brand: string;
+    model: string;
+    photoUrl: string;
+    seatCount: number;
+    luggageCount: number;
+  };
+};
+
+export type VehicleProcurementRecord = {
+  channel: string;
+  purchaseOrderNo: string;
+  guideQuotes: VehicleGuideQuoteRecord[];
+  fulfillment?: VehicleProcurementFulfillmentRecord;
+};
+
 export type VehicleOrderDetailRecord = {
   orderId: string;
   booker: OrderContact;
@@ -160,6 +213,7 @@ export type VehicleOrderDetailRecord = {
     travelerCount: number;
     luggageCount: number;
   };
+  procurement?: VehicleProcurementRecord;
   travelers: OrderContact[];
   itinerary: Array<{
     id: string;
@@ -250,6 +304,8 @@ export const roles: RoleRecord[] = [
       'tags.manage',
       'coupons.view',
       'coupons.manage',
+      'pricingStrategies.view',
+      'pricingStrategies.manage',
       'paymentReceipts.view',
       'orders.view',
       'orders.manage',
@@ -267,6 +323,8 @@ export const roles: RoleRecord[] = [
       'tags.view',
       'coupons.view',
       'coupons.manage',
+      'pricingStrategies.view',
+      'pricingStrategies.manage',
       'paymentReceipts.view',
       'orders.view',
       'orders.manage',
@@ -503,6 +561,57 @@ export const users: UserRecord[] = [
     socials: [{ platform: 'WhatsApp', account: '+33 6 98 22 41 70' }],
     tagIds: ['tag-new'],
   },
+  {
+    id: 'VU-1002217',
+    englishGivenName: 'Eva',
+    englishFamilyName: 'Müller',
+    status: 'active',
+    source: 'app',
+    registeredAt: '2026-08-15 10:42',
+    nationality: 'DE',
+    gender: 'female',
+    maritalStatus: 'single',
+    countryCode: '+49',
+    phone: '151 555 0124',
+    birthDate: '1990-02-18',
+    email: 'eva.mueller@example.com',
+    socials: [{ platform: 'WhatsApp', account: '+49 151 555 0124' }],
+    tagIds: ['tag-business'],
+  },
+  {
+    id: 'VU-1002198',
+    englishGivenName: 'Oliver',
+    englishFamilyName: 'Smith',
+    status: 'active',
+    source: 'partner',
+    registeredAt: '2026-08-14 16:20',
+    nationality: 'GB',
+    gender: 'male',
+    maritalStatus: 'married',
+    countryCode: '+44',
+    phone: '7700 900 654',
+    birthDate: '1987-07-11',
+    email: 'oliver.smith@example.com',
+    socials: [{ platform: 'WhatsApp', account: '+44 7700 900 654' }],
+    tagIds: ['tag-frequent'],
+  },
+  {
+    id: 'VU-1002173',
+    englishGivenName: 'Mina',
+    englishFamilyName: 'Tanaka',
+    status: 'active',
+    source: 'api',
+    registeredAt: '2026-08-13 09:05',
+    nationality: 'JP',
+    gender: 'female',
+    maritalStatus: 'single',
+    countryCode: '+81',
+    phone: '90 5555 0180',
+    birthDate: '1993-10-04',
+    email: 'mina.tanaka@example.com',
+    socials: [{ platform: 'LINE', account: 'mina.tanaka93' }],
+    tagIds: ['tag-api'],
+  },
 ];
 
 export const vehicleOrders: VehicleOrderRecord[] = [
@@ -519,7 +628,9 @@ export const vehicleOrders: VehicleOrderRecord[] = [
     amount: 128.5,
     currency: 'USD',
     orderedAt: '2026-08-21 09:32',
-    status: 'paid',
+    status: 'pendingPayment',
+    paymentTimeRemaining: '23:00',
+    paymentDeadline: '2026-08-21 10:02',
   },
   {
     id: 'VO-20260821-1031',
@@ -534,7 +645,7 @@ export const vehicleOrders: VehicleOrderRecord[] = [
     amount: 620,
     currency: 'CNY',
     orderedAt: '2026-08-21 08:46',
-    status: 'paid',
+    status: 'matching',
   },
   {
     id: 'VO-20260820-0998',
@@ -549,7 +660,7 @@ export const vehicleOrders: VehicleOrderRecord[] = [
     amount: 142.75,
     currency: 'EUR',
     orderedAt: '2026-08-20 22:18',
-    status: 'paid',
+    status: 'onHold',
   },
   {
     id: 'VO-20260820-0974',
@@ -564,7 +675,7 @@ export const vehicleOrders: VehicleOrderRecord[] = [
     amount: 97.2,
     currency: 'USD',
     orderedAt: '2026-08-20 18:54',
-    status: 'paid',
+    status: 'unpaid',
   },
   {
     id: 'VO-20260820-0951',
@@ -579,7 +690,7 @@ export const vehicleOrders: VehicleOrderRecord[] = [
     amount: 9800,
     currency: 'JPY',
     orderedAt: '2026-08-20 15:27',
-    status: 'paid',
+    status: 'cancelled',
   },
   {
     id: 'VO-20260819-0902',
@@ -594,8 +705,52 @@ export const vehicleOrders: VehicleOrderRecord[] = [
     amount: 116.4,
     currency: 'EUR',
     orderedAt: '2026-08-19 11:08',
-    status: 'pendingPayment',
-    paymentTimeRemaining: '23:00',
+    status: 'voided',
+  },
+  {
+    id: 'VO-20260819-0896',
+    entryChannel: 'app',
+    procurementChannel: 'GlobalRide',
+    customerName: 'Eva Müller',
+    countryCode: '+49',
+    customerPhone: '151 555 0124',
+    purchaseOrderNo: 'PO-GLR-88096',
+    thirdPartyOrderNo: 'GLR-89468096',
+    orderType: 'vehicle',
+    amount: 168,
+    currency: 'USD',
+    orderedAt: '2026-08-19 09:16',
+    status: 'pendingTravel',
+  },
+  {
+    id: 'VO-20260818-0864',
+    entryChannel: 'partner',
+    procurementChannel: 'LocalLink',
+    customerName: 'Oliver Smith',
+    countryCode: '+44',
+    customerPhone: '7700 900 654',
+    purchaseOrderNo: 'PO-LL-71654',
+    thirdPartyOrderNo: 'LL-50270654',
+    orderType: 'vehicle',
+    amount: 88.2,
+    currency: 'EUR',
+    orderedAt: '2026-08-18 17:42',
+    status: 'inTravel',
+  },
+  {
+    id: 'VO-20260817-0801',
+    entryChannel: 'api',
+    procurementChannel: 'Voya Direct',
+    customerName: 'Mina Tanaka',
+    countryCode: '+81',
+    customerPhone: '90 5555 0180',
+    purchaseOrderNo: 'PO-VD-26081701',
+    thirdPartyOrderNo: 'VD-61378001',
+    orderType: 'vehicle',
+    amount: 12400,
+    currency: 'JPY',
+    orderedAt: '2026-08-17 12:08',
+    status: 'completed',
   },
 ];
 
@@ -754,7 +909,193 @@ const vehicleOrderDetailSeeds = [
       },
     ],
   },
+  {
+    city: 'Berlin',
+    startDate: '2026-08-22',
+    endDate: '2026-08-22',
+    departureTime: '10:20',
+    serviceType: 'airportTransfer' as const,
+    vehicleCategory: 'sedan' as const,
+    luggageCount: 2,
+    itinerary: [
+      {
+        date: '2026-08-22',
+        stops: [
+          {
+            type: 'origin' as const,
+            name: 'Berlin Brandenburg Airport T1',
+            time: '10:20',
+          },
+          {
+            type: 'destination' as const,
+            name: 'Hotel Adlon Kempinski',
+            time: '11:15',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    city: 'London',
+    startDate: '2026-08-21',
+    endDate: '2026-08-21',
+    departureTime: '14:10',
+    serviceType: 'pointToPoint' as const,
+    vehicleCategory: 'suv' as const,
+    luggageCount: 1,
+    itinerary: [
+      {
+        date: '2026-08-21',
+        stops: [
+          { type: 'origin' as const, name: 'Canary Wharf', time: '14:10' },
+          {
+            type: 'destination' as const,
+            name: 'London City Airport',
+            time: '14:45',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    city: 'Tokyo',
+    startDate: '2026-08-20',
+    endDate: '2026-08-20',
+    departureTime: '09:00',
+    serviceType: 'multiDayCharter' as const,
+    vehicleCategory: 'businessVan' as const,
+    luggageCount: 3,
+    itinerary: [
+      {
+        date: '2026-08-20',
+        stops: [
+          { type: 'origin' as const, name: 'Tokyo Station', time: '09:00' },
+          {
+            type: 'waypoint' as const,
+            name: 'Asakusa Temple',
+            time: '09:30',
+          },
+          {
+            type: 'destination' as const,
+            name: 'Haneda Airport T3',
+            time: '12:15',
+          },
+        ],
+      },
+    ],
+  },
 ];
+
+const matchingGuideQuotes: VehicleGuideQuoteRecord[] = [
+  {
+    id: 'quote-VO-20260821-1031-01',
+    guideId: 'GUIDE-SHA-0182',
+    guideName: '张伟',
+    vehicle: {
+      registrationNumber: '沪A·D51827',
+      brand: 'Mercedes-Benz',
+      model: 'V-Class',
+      seatCount: 7,
+      luggageCount: 4,
+    },
+    priceCny: 520,
+  },
+  {
+    id: 'quote-VO-20260821-1031-02',
+    guideId: 'GUIDE-SHA-0247',
+    guideName: '李敏',
+    vehicle: {
+      registrationNumber: '沪A·F67219',
+      brand: 'Buick',
+      model: 'GL8 Avenir',
+      seatCount: 7,
+      luggageCount: 5,
+    },
+    priceCny: 560,
+  },
+  {
+    id: 'quote-VO-20260821-1031-03',
+    guideId: 'GUIDE-SHA-0319',
+    guideName: '陈浩',
+    vehicle: {
+      registrationNumber: '沪A·E90316',
+      brand: 'Toyota',
+      model: 'Alphard',
+      seatCount: 7,
+      luggageCount: 4,
+    },
+    priceCny: 610,
+  },
+];
+
+const fulfillmentProcurementByOrderId: Record<
+  string,
+  VehicleProcurementFulfillmentRecord
+> = {
+  'VO-20260819-0896': {
+    purchasePriceCny: 720,
+    guide: {
+      name: 'Lara Schneider',
+      age: 34,
+      gender: 'female',
+      nationality: 'DE',
+      serviceRating: 4.9,
+      countryCode: '+49',
+      phone: '30 9018 4421',
+      whatsApp: '+49 30 9018 4421',
+    },
+    vehicle: {
+      registrationNumber: 'B-VE 6089',
+      brand: 'Mercedes-Benz',
+      model: 'V-Class',
+      photoUrl: '/vehicles/guide-vehicle-v-class.jpg',
+      seatCount: 7,
+      luggageCount: 4,
+    },
+  },
+  'VO-20260818-0864': {
+    purchasePriceCny: 430,
+    guide: {
+      name: 'Daniel Price',
+      age: 42,
+      gender: 'male',
+      nationality: 'GB',
+      serviceRating: 4.8,
+      countryCode: '+44',
+      phone: '7700 900 817',
+      whatsApp: '+44 7700 900 817',
+    },
+    vehicle: {
+      registrationNumber: 'LM26 VOY',
+      brand: 'Mercedes-Benz',
+      model: 'V-Class',
+      photoUrl: '/vehicles/guide-vehicle-v-class.jpg',
+      seatCount: 7,
+      luggageCount: 4,
+    },
+  },
+  'VO-20260817-0801': {
+    purchasePriceCny: 520,
+    guide: {
+      name: 'Haruto Sato',
+      age: 39,
+      gender: 'male',
+      nationality: 'JP',
+      serviceRating: 4.9,
+      countryCode: '+81',
+      phone: '90 5182 7046',
+      whatsApp: '+81 90 5182 7046',
+    },
+    vehicle: {
+      registrationNumber: '品川 330 わ 1208',
+      brand: 'Mercedes-Benz',
+      model: 'V-Class',
+      photoUrl: '/vehicles/guide-vehicle-v-class.jpg',
+      seatCount: 7,
+      luggageCount: 4,
+    },
+  },
+};
 
 export const vehicleOrderDetails: Record<string, VehicleOrderDetailRecord> =
   Object.fromEntries(
@@ -824,6 +1165,22 @@ export const vehicleOrderDetails: Record<string, VehicleOrderDetailRecord> =
                 transactionId,
               },
             ];
+      const fulfillmentProcurement = fulfillmentProcurementByOrderId[order.id];
+      const procurement: VehicleProcurementRecord | undefined =
+        order.status === 'matching'
+          ? {
+              channel: order.procurementChannel,
+              purchaseOrderNo: order.purchaseOrderNo,
+              guideQuotes: matchingGuideQuotes,
+            }
+          : fulfillmentProcurement
+            ? {
+                channel: order.procurementChannel,
+                purchaseOrderNo: order.purchaseOrderNo,
+                guideQuotes: [],
+                fulfillment: fulfillmentProcurement,
+              }
+            : undefined;
 
       return [
         order.id,
@@ -856,6 +1213,7 @@ export const vehicleOrderDetails: Record<string, VehicleOrderDetailRecord> =
             travelerCount: travelers.length,
             luggageCount: seed.luggageCount,
           },
+          procurement,
           travelers,
           itinerary: seed.itinerary.map((day, dayIndex) => ({
             id: `${order.id}-day-${dayIndex + 1}`,
@@ -880,13 +1238,17 @@ export const vehicleOrderDetails: Record<string, VehicleOrderDetailRecord> =
               actorName: 'Voya Portal',
               action: 'paymentRecorded',
             },
-            {
-              id: `${order.id}-log-3`,
-              at: order.orderedAt.replace(/:\d{2}$/, ':36'),
-              actorType: 'system',
-              actorName: 'Voya Portal',
-              action: 'procurementSubmitted',
-            },
+            ...(procurement
+              ? [
+                  {
+                    id: `${order.id}-log-3`,
+                    at: order.orderedAt.replace(/:\d{2}$/, ':36'),
+                    actorType: 'system' as const,
+                    actorName: 'Voya Portal',
+                    action: 'procurementSubmitted' as const,
+                  },
+                ]
+              : []),
             {
               id: `${order.id}-log-4`,
               at: order.orderedAt.replace(/:\d{2}$/, ':41'),
@@ -1020,6 +1382,20 @@ export const permissionTreeData = [
         children: [
           { key: 'coupons.view', titleId: 'voya.permission.view' },
           { key: 'coupons.manage', titleId: 'voya.permission.manage' },
+        ],
+      },
+      {
+        key: 'pricingStrategies',
+        titleId: 'voya.permission.pricingStrategies',
+        children: [
+          {
+            key: 'pricingStrategies.view',
+            titleId: 'voya.permission.view',
+          },
+          {
+            key: 'pricingStrategies.manage',
+            titleId: 'voya.permission.manage',
+          },
         ],
       },
     ],

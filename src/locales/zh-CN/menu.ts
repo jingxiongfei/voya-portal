@@ -12,6 +12,7 @@ export default {
   'menu.users.detail': '用户详情',
   'menu.operations': '运营管理',
   'menu.operations.coupons': '优惠券管理',
+  'menu.operations.pricing-strategies': '定价策略',
   'menu.finance': '财务管理',
   'menu.finance.payment-receipts': '收款明细',
   'menu.orders': '订单中心',

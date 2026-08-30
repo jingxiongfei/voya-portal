@@ -1,5 +1,6 @@
 import { FilterOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useIntl } from '@umijs/max';
+import type { TablePaginationConfig } from 'antd';
 import { Avatar, Card, Flex, Space, Statistic, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import type { ReactNode } from 'react';
@@ -16,6 +17,20 @@ const sourceColor: Record<RegistrationSource, string> = {
   app: 'blue',
   api: 'purple',
   partner: 'cyan',
+};
+
+export const defaultTablePagination: TablePaginationConfig = {
+  defaultPageSize: 10,
+  hideOnSinglePage: false,
+  pageSizeOptions: [10, 20, 50],
+  showQuickJumper: true,
+  showSizeChanger: true,
+};
+
+export const compactTablePagination: TablePaginationConfig = {
+  defaultPageSize: 10,
+  hideOnSinglePage: false,
+  showSizeChanger: false,
 };
 
 export const UserStatusTag = ({ status }: { status: DemoUserStatus }) => {

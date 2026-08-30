@@ -16,20 +16,23 @@ export const canRefundReceipt = (
 export const bindReceiptToOrder = (
   receipt: PaymentReceiptRecord,
   order: Pick<VehicleOrderRecord, 'id' | 'orderedAt'>,
-  reboundAt: string,
+  operatedAt: string,
+  operator: string,
 ): PaymentReceiptRecord => {
-  const bindingHistory =
-    receipt.lastUnboundOrderId && receipt.lastUnboundOrderId !== order.id
-      ? [
-          ...receipt.bindingHistory,
-          {
-            id: `${receipt.id}-binding-${receipt.bindingHistory.length + 1}`,
-            fromOrderId: receipt.lastUnboundOrderId,
-            toOrderId: order.id,
-            reboundAt,
-          },
-        ]
-      : receipt.bindingHistory;
+  const isRebinding =
+    Boolean(receipt.lastUnboundOrderId) &&
+    receipt.lastUnboundOrderId !== order.id;
+  const bindingHistory = [
+    ...receipt.bindingHistory,
+    {
+      id: `${receipt.id}-binding-${receipt.bindingHistory.length + 1}`,
+      action: isRebinding ? ('rebind' as const) : ('bind' as const),
+      fromOrderId: isRebinding ? receipt.lastUnboundOrderId : undefined,
+      toOrderId: order.id,
+      operatedAt,
+      operator,
+    },
+  ];
 
   return {
     ...receipt,

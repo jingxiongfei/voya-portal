@@ -3,7 +3,6 @@ import { PageContainer } from '@ant-design/pro-components';
 import { history, useIntl } from '@umijs/max';
 import type { TableColumnsType } from 'antd';
 import {
-  Alert,
   Button,
   ConfigProvider,
   DatePicker,
@@ -12,6 +11,7 @@ import {
   Select,
   Space,
   Table,
+  Tag,
   Typography,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -19,16 +19,24 @@ import dayjs from 'dayjs';
 import { useState } from 'react';
 import {
   DataCard,
+  defaultTablePagination,
   FilterCard,
   LocalizedDateTime,
-  RegistrationSourceTag,
 } from '../components';
 import {
   type RegistrationSource,
   type VehicleOrderRecord,
+  type VehicleOrderStatus,
   vehicleOrders,
 } from '../mockData';
 import { useVoyaPageStyles } from '../styles';
+
+type OrderStatusFilterKey =
+  | 'all'
+  | 'paid'
+  | 'unpaid'
+  | 'cancelled'
+  | 'afterSales';
 
 type FilterValues = {
   entryChannel?: RegistrationSource;
@@ -38,10 +46,42 @@ type FilterValues = {
   customerName?: string;
   purchaseOrderNo?: string;
   orderedAt?: [Dayjs, Dayjs];
+  status?: OrderStatusFilterKey;
 };
 const procurementChannels = Array.from(
   new Set(vehicleOrders.map((order) => order.procurementChannel)),
 );
+const orderStatusSummaryFilters: Array<{
+  key: OrderStatusFilterKey;
+  statuses?: VehicleOrderStatus[];
+}> = [
+  { key: 'all' },
+  {
+    key: 'paid',
+    statuses: [
+      'matching',
+      'onHold',
+      'voided',
+      'pendingTravel',
+      'inTravel',
+      'completed',
+    ],
+  },
+  { key: 'unpaid', statuses: ['pendingPayment', 'unpaid'] },
+  { key: 'cancelled', statuses: ['cancelled'] },
+  { key: 'afterSales', statuses: [] },
+];
+const orderStatusColor: Record<VehicleOrderStatus, string> = {
+  pendingPayment: 'warning',
+  matching: 'processing',
+  onHold: 'warning',
+  unpaid: 'orange',
+  cancelled: 'error',
+  voided: 'default',
+  pendingTravel: 'blue',
+  inTravel: 'cyan',
+  completed: 'success',
+};
 
 export default function VehicleOrdersPage() {
   const [filters, setFilters] = useState<FilterValues>({});
@@ -49,14 +89,14 @@ export default function VehicleOrdersPage() {
   const intl = useIntl();
   const { styles } = useVoyaPageStyles();
   const t = (id: string) => intl.formatMessage({ id });
-  const filteredOrders = vehicleOrders.filter((order) => {
+  const matchesNonStatusFilters = (order: VehicleOrderRecord) => {
     const includes = (value: string, query?: string) =>
       !query || value.toLowerCase().includes(query.trim().toLowerCase());
     const orderedAt = dayjs(order.orderedAt);
     const inRange =
       !filters.orderedAt ||
-      (orderedAt.isAfter(filters.orderedAt[0].startOf('day')) &&
-        orderedAt.isBefore(filters.orderedAt[1].endOf('day')));
+      (!orderedAt.isBefore(filters.orderedAt[0].startOf('day')) &&
+        !orderedAt.isAfter(filters.orderedAt[1].endOf('day')));
     return (
       (!filters.entryChannel || order.entryChannel === filters.entryChannel) &&
       (!filters.procurementChannel ||
@@ -70,39 +110,77 @@ export default function VehicleOrdersPage() {
       includes(order.purchaseOrderNo, filters.purchaseOrderNo) &&
       inRange
     );
-  });
+  };
+  const statusBaseOrders = vehicleOrders.filter(matchesNonStatusFilters);
+  const selectedStatusFilter = filters.status ?? 'all';
+  const selectedStatusDefinition = orderStatusSummaryFilters.find(
+    ({ key }) => key === selectedStatusFilter,
+  );
+  const filteredOrders = statusBaseOrders.filter(
+    (order) =>
+      !selectedStatusDefinition?.statuses ||
+      selectedStatusDefinition.statuses.includes(order.status),
+  );
+  const statusCounts = new Map(
+    orderStatusSummaryFilters.map(({ key, statuses }) => [
+      key,
+      statuses
+        ? statusBaseOrders.filter((order) => statuses.includes(order.status))
+            .length
+        : statusBaseOrders.length,
+    ]),
+  );
 
   const columns: TableColumnsType<VehicleOrderRecord> = [
     {
       title: t('voya.order.id'),
       dataIndex: 'id',
       fixed: 'left',
+      width: 190,
       render: (value) => <Typography.Text copyable>{value}</Typography.Text>,
     },
     {
       title: t('voya.order.type'),
       dataIndex: 'orderType',
-      width: 90,
+      width: 76,
       render: (value) => t(`voya.order.type.${value}`),
+    },
+    {
+      title: t('voya.order.status'),
+      dataIndex: 'status',
+      width: 104,
+      render: (value: VehicleOrderStatus) => (
+        <Tag color={orderStatusColor[value]}>
+          {t(`voya.order.status.${value}`)}
+        </Tag>
+      ),
     },
     {
       title: t('voya.order.entryChannel'),
       dataIndex: 'entryChannel',
-      render: (value) => <RegistrationSourceTag source={value} />,
+      width: 110,
+      render: (value: RegistrationSource) => t(`voya.user.source.${value}`),
     },
     {
       title: t('voya.order.procurementChannel'),
       dataIndex: 'procurementChannel',
+      width: 130,
     },
-    { title: t('voya.order.customerName'), dataIndex: 'customerName' },
+    {
+      title: t('voya.order.customerName'),
+      dataIndex: 'customerName',
+      width: 140,
+    },
     {
       title: t('voya.order.customerPhone'),
       dataIndex: 'customerPhone',
+      width: 155,
       render: (value, record) => `${record.countryCode} ${value}`,
     },
     {
       title: t('voya.order.purchaseOrderNo'),
       dataIndex: 'purchaseOrderNo',
+      width: 150,
       render: (value) => <Typography.Text code>{value}</Typography.Text>,
     },
     {
@@ -141,13 +219,46 @@ export default function VehicleOrdersPage() {
       subTitle={t('voya.order.subtitle')}
     >
       <div className={styles.stack}>
-        <Alert showIcon type="warning" title={t('voya.order.notice')} />
         <FilterCard compact>
+          <fieldset
+            className={styles.orderStatusMetrics}
+            aria-label={t('voya.order.statusFilter.title')}
+          >
+            {orderStatusSummaryFilters.map(({ key }) => {
+              const selected = selectedStatusFilter === key;
+              return (
+                <Button
+                  key={key}
+                  block
+                  type="default"
+                  className={`${styles.orderStatusMetric} ${
+                    selected ? styles.orderStatusMetricActive : ''
+                  }`}
+                  aria-pressed={selected}
+                  onClick={() =>
+                    setFilters((previous) => ({
+                      ...previous,
+                      status: key === previous.status ? undefined : key,
+                    }))
+                  }
+                >
+                  <span className={styles.orderStatusMetricLabel}>
+                    {t(`voya.order.statusFilter.${key}`)}
+                  </span>
+                  <span className={styles.orderStatusMetricValue}>
+                    {statusCounts.get(key) ?? 0}
+                  </span>
+                </Button>
+              );
+            })}
+          </fieldset>
           <Form
             form={form}
             layout="vertical"
             size="small"
-            onFinish={setFilters}
+            onFinish={(values) =>
+              setFilters((previous) => ({ ...previous, ...values }))
+            }
             className={styles.orderFilterGrid}
           >
             <Form.Item name="entryChannel" label={t('voya.order.entryChannel')}>
@@ -244,9 +355,9 @@ export default function VehicleOrdersPage() {
                   );
                 },
               })}
-              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+              pagination={defaultTablePagination}
               size="small"
-              scroll={{ x: 1510 }}
+              scroll={{ x: 1650 }}
             />
           </ConfigProvider>
         </DataCard>

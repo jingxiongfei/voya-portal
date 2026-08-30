@@ -1,8 +1,10 @@
 import {
   ArrowLeftOutlined,
   CarOutlined,
+  CheckOutlined,
   CloseCircleOutlined,
   CreditCardOutlined,
+  DollarOutlined,
   EnvironmentOutlined,
   ExclamationCircleOutlined,
   HistoryOutlined,
@@ -11,14 +13,18 @@ import {
   PhoneOutlined,
   ProfileOutlined,
   RollbackOutlined,
+  ShoppingCartOutlined,
+  StarOutlined,
   StopOutlined,
   TeamOutlined,
   UserOutlined,
+  WhatsAppOutlined,
 } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
-import { history, useIntl, useParams } from '@umijs/max';
+import { history, useIntl, useModel, useParams } from '@umijs/max';
 import type { TableColumnsType } from 'antd';
 import {
+  Alert,
   Anchor,
   App,
   Button,
@@ -26,9 +32,14 @@ import {
   Collapse,
   Descriptions,
   Divider,
+  Drawer,
   Empty,
   Flex,
+  Image,
+  Modal,
   Popconfirm,
+  Rate,
+  Select,
   Space,
   Table,
   Tag,
@@ -36,6 +47,7 @@ import {
   Typography,
   theme,
 } from 'antd';
+import dayjs from 'dayjs';
 import {
   type CSSProperties,
   type ReactNode,
@@ -49,11 +61,19 @@ import {
   type OrderLogActorType,
   type RegistrationSource,
   type VehicleOrderStatus,
-  type VehiclePaymentRecord,
   vehicleOrderDetails,
   vehicleOrders,
 } from '../mockData';
+import { paymentReceipts } from '../payment-receipts/_mock';
+import { ReceiptBindingHistoryPopover } from '../ReceiptBindingHistoryPopover';
 import { useVoyaPageStyles } from '../styles';
+import {
+  convertCnyToPaymentCurrency,
+  getOrderPaymentRecords,
+  isReboundPaymentRecord,
+  type OrderPaymentRecord,
+  rebindReceiptToOrder,
+} from './paymentActions';
 
 const actorColor: Record<OrderLogActorType, string> = {
   system: 'default',
@@ -63,7 +83,14 @@ const actorColor: Record<OrderLogActorType, string> = {
 
 const orderStatusColor: Record<VehicleOrderStatus, string> = {
   pendingPayment: 'warning',
-  paid: 'success',
+  matching: 'processing',
+  onHold: 'warning',
+  unpaid: 'orange',
+  cancelled: 'error',
+  voided: 'default',
+  pendingTravel: 'blue',
+  inTravel: 'cyan',
+  completed: 'success',
 };
 
 const stopColor = {
@@ -75,9 +102,23 @@ const stopColor = {
 const DEFAULT_DETAIL_TITLE_STICKY_BOTTOM = 156;
 const DETAIL_NAV_HEIGHT = 48;
 
+type PaymentDetailRecord =
+  | (OrderPaymentRecord & { kind: 'payment' })
+  | {
+      kind: 'coupon';
+      id: string;
+      currency: OrderPaymentRecord['currency'];
+      method: 'coupon';
+      paidAmount: number;
+      paidAt: string;
+      transactionId: string;
+      bindingHistory: [];
+    };
+
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const intl = useIntl();
+  const { initialState } = useModel('@@initialState');
   const { message } = App.useApp();
   const { styles } = useVoyaPageStyles();
   const { token } = theme.useToken();
@@ -87,6 +128,11 @@ export default function OrderDetailPage() {
     DEFAULT_DETAIL_TITLE_STICKY_BOTTOM,
   );
   const [isDetailAnchorStuck, setIsDetailAnchorStuck] = useState(false);
+  const [receipts, setReceipts] = useState(paymentReceipts);
+  const [isCollectModalOpen, setIsCollectModalOpen] = useState(false);
+  const [isQuoteDrawerOpen, setIsQuoteDrawerOpen] = useState(false);
+  const [selectedGuideQuoteId, setSelectedGuideQuoteId] = useState<string>();
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string>();
   const t = (messageId: string) => intl.formatMessage({ id: messageId });
   const order = vehicleOrders.find((record) => record.id === id);
   const detail = order ? vehicleOrderDetails[order.id] : undefined;
@@ -162,6 +208,13 @@ export default function OrderDetailPage() {
     };
   }, [detailTitleStickyBottom, id]);
 
+  useEffect(() => {
+    setIsCollectModalOpen(false);
+    setIsQuoteDrawerOpen(false);
+    setSelectedGuideQuoteId(undefined);
+    setSelectedTransactionId(undefined);
+  }, [id]);
+
   if (!order || !detail) {
     return (
       <PageContainer
@@ -193,10 +246,99 @@ export default function OrderDetailPage() {
       maximumFractionDigits: 2,
     });
 
-  const totalPaidAmount = detail.payment.records.reduce(
+  const paymentRecords = getOrderPaymentRecords(order.id, receipts);
+  const paymentDetailRecords: PaymentDetailRecord[] = [
+    ...paymentRecords.map((paymentRecord) => ({
+      ...paymentRecord,
+      kind: 'payment' as const,
+    })),
+    ...detail.payment.coupons.map((coupon) => ({
+      kind: 'coupon' as const,
+      id: coupon.id,
+      currency: coupon.currency,
+      method: 'coupon' as const,
+      paidAmount: -coupon.discountAmount,
+      paidAt: coupon.usedAt,
+      transactionId: coupon.code,
+      bindingHistory: [] as [],
+    })),
+  ].sort((left, right) => right.paidAt.localeCompare(left.paidAt));
+  const availableReceipts = receipts.filter(
+    (receipt) =>
+      !receipt.refundedAt &&
+      receipt.currency === order.currency &&
+      receipt.orderId !== order.id,
+  );
+  const selectedReceipt = availableReceipts.find(
+    (receipt) => receipt.transactionId === selectedTransactionId,
+  );
+  const totalPaidAmount = paymentRecords.reduce(
     (total, paymentRecord) => total + paymentRecord.paidAmount,
     0,
   );
+  const totalPaidAmountCny = receipts
+    .filter((receipt) => receipt.orderId === order.id && !receipt.refundedAt)
+    .reduce(
+      (total, receipt) => total + receipt.amount * receipt.exchangeRateToCny,
+      0,
+    );
+  const paymentCurrencyExchangeRateToCny =
+    totalPaidAmount > 0 ? totalPaidAmountCny / totalPaidAmount : 1;
+  const isAwaitingPayment =
+    order.status === 'pendingPayment' || order.status === 'unpaid';
+  const procurementFulfillment = detail.procurement?.fulfillment;
+  const totalProcessingFee = receipts
+    .filter((receipt) => receipt.orderId === order.id && !receipt.refundedAt)
+    .reduce((total, receipt) => total + (receipt.processingFee ?? 0), 0);
+  const convertedProcurementCost = procurementFulfillment
+    ? convertCnyToPaymentCurrency(
+        procurementFulfillment.purchasePriceCny,
+        paymentCurrencyExchangeRateToCny,
+      )
+    : 0;
+  const procurementGrossProfit =
+    totalPaidAmount - totalProcessingFee - convertedProcurementCost;
+
+  const closeCollectModal = () => {
+    setIsCollectModalOpen(false);
+    setSelectedTransactionId(undefined);
+  };
+
+  const selectGuideQuote = (quoteId: string, guideName: string) => {
+    setSelectedGuideQuoteId(quoteId);
+    message.success(
+      intl.formatMessage(
+        { id: 'voya.order.procurementSelectSuccess' },
+        { guide: guideName },
+      ),
+    );
+  };
+
+  const collectPayment = () => {
+    if (!selectedReceipt) {
+      return;
+    }
+
+    const reboundReceipt = rebindReceiptToOrder(
+      selectedReceipt,
+      order,
+      dayjs().format('YYYY-MM-DD HH:mm'),
+      initialState?.currentUser?.name ?? t('voya.receipt.operator.system'),
+      t('voya.receipt.operator.system'),
+    );
+    setReceipts((currentReceipts) =>
+      currentReceipts.map((receipt) =>
+        receipt.id === reboundReceipt.id ? reboundReceipt : receipt,
+      ),
+    );
+    message.success(
+      intl.formatMessage(
+        { id: 'voya.order.collectSuccess' },
+        { transactionId: selectedReceipt.transactionId },
+      ),
+    );
+    closeCollectModal();
+  };
 
   const sectionTitle = (icon: ReactNode, label: string) => (
     <span className={styles.sectionTitle}>
@@ -209,25 +351,21 @@ export default function OrderDetailPage() {
     {
       key: 'hold',
       icon: <PauseCircleOutlined />,
-      danger: false,
       confirmDanger: false,
     },
     {
       key: 'refund',
       icon: <RollbackOutlined />,
-      danger: false,
       confirmDanger: true,
     },
     {
       key: 'cancel',
       icon: <CloseCircleOutlined />,
-      danger: true,
       confirmDanger: true,
     },
     {
       key: 'void',
       icon: <StopOutlined />,
-      danger: true,
       confirmDanger: true,
     },
   ] as const;
@@ -269,7 +407,7 @@ export default function OrderDetailPage() {
     },
   ];
 
-  const paymentColumns: TableColumnsType<VehiclePaymentRecord> = [
+  const paymentColumns: TableColumnsType<PaymentDetailRecord> = [
     {
       title: t('voya.order.paymentCurrency'),
       dataIndex: 'currency',
@@ -305,11 +443,37 @@ export default function OrderDetailPage() {
       title: t('voya.order.transactionId'),
       dataIndex: 'transactionId',
       key: 'transactionId',
-      render: (transactionId: string) => (
-        <Typography.Text code copyable={{ text: transactionId }}>
-          {transactionId}
-        </Typography.Text>
-      ),
+      width: 360,
+      render: (transactionId: string, paymentRecord) => {
+        if (paymentRecord.kind === 'coupon') {
+          return (
+            <Typography.Text code copyable={{ text: transactionId }}>
+              {transactionId}
+            </Typography.Text>
+          );
+        }
+
+        const isRebound = isReboundPaymentRecord(paymentRecord, order.id);
+
+        return (
+          <Space size="small" wrap>
+            <Typography.Text code copyable={{ text: transactionId }}>
+              {transactionId}
+            </Typography.Text>
+            {isRebound ? (
+              <>
+                <Typography.Text type="secondary">
+                  {t('voya.order.paymentReboundSource')}
+                </Typography.Text>
+                <ReceiptBindingHistoryPopover
+                  bindingHistory={paymentRecord.bindingHistory}
+                  orderId={order.id}
+                />
+              </>
+            ) : null}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -336,6 +500,12 @@ export default function OrderDetailPage() {
                 orientation="vertical"
               />
               <Space size="small" wrap>
+                <Button
+                  icon={<DollarOutlined />}
+                  onClick={() => setIsCollectModalOpen(true)}
+                >
+                  {t('voya.order.action.collect')}
+                </Button>
                 {orderActions.map((action) => (
                   <Popconfirm
                     key={action.key}
@@ -357,7 +527,7 @@ export default function OrderDetailPage() {
                       )
                     }
                   >
-                    <Button danger={action.danger} icon={action.icon}>
+                    <Button icon={action.icon}>
                       {t(`voya.order.action.${action.key}`)}
                     </Button>
                   </Popconfirm>
@@ -409,6 +579,11 @@ export default function OrderDetailPage() {
                 title: t('voya.order.paymentInfo'),
               },
               {
+                key: 'procurement-info',
+                href: '#procurement-info',
+                title: t('voya.order.procurementInfo'),
+              },
+              {
                 key: 'booking-details',
                 href: '#booking-details',
                 title: t('voya.order.bookingDetails'),
@@ -439,42 +614,49 @@ export default function OrderDetailPage() {
                 <span className={styles.metricIcon}>
                   <CarOutlined />
                 </span>
-                <div>
-                  <Space size="small" wrap>
-                    <Typography.Title
-                      copyable={{ text: order.id }}
-                      level={3}
-                      style={{ margin: 0 }}
-                    >
-                      {order.id}
-                    </Typography.Title>
-                    <Tag color="blue">
-                      {t(`voya.order.type.${order.orderType}`)}
-                    </Tag>
-                  </Space>
-                  <Space size="small" wrap>
-                    <Tag color={orderStatusColor[order.status]}>
-                      {t(`voya.order.status.${order.status}`)}
-                    </Tag>
-                    {order.status === 'pendingPayment' &&
-                    order.paymentTimeRemaining ? (
-                      <Typography.Text type="warning">
-                        {intl.formatMessage(
-                          { id: 'voya.order.paymentTimeRemaining' },
-                          { time: order.paymentTimeRemaining },
-                        )}
-                      </Typography.Text>
-                    ) : null}
-                    <LocalizedDateTime value={order.orderedAt} />
-                  </Space>
-                </div>
+                <Flex
+                  align="center"
+                  className={styles.orderSummaryMeta}
+                  gap="small"
+                  wrap
+                >
+                  <Typography.Title
+                    copyable={{ text: order.id }}
+                    level={3}
+                    style={{ margin: 0 }}
+                  >
+                    {order.id}
+                  </Typography.Title>
+                  <Tag color="blue">
+                    {t(`voya.order.type.${order.orderType}`)}
+                  </Tag>
+                  <Tag color={orderStatusColor[order.status]}>
+                    {t(`voya.order.status.${order.status}`)}
+                  </Tag>
+                  {order.status === 'pendingPayment' &&
+                  order.paymentTimeRemaining ? (
+                    <Typography.Text strong type="danger">
+                      {intl.formatMessage(
+                        { id: 'voya.order.paymentTimeRemaining' },
+                        { time: order.paymentTimeRemaining },
+                      )}
+                    </Typography.Text>
+                  ) : null}
+                  {order.status === 'pendingPayment' &&
+                  order.paymentDeadline ? (
+                    <Typography.Text type="secondary">
+                      {t('voya.order.paymentDeadline')}{' '}
+                      <LocalizedDateTime value={order.paymentDeadline} />
+                    </Typography.Text>
+                  ) : null}
+                </Flex>
               </Flex>
               <div className={styles.amountSummary}>
                 <Typography.Text type="secondary">
-                  {t('voya.order.paidAmount')}
+                  {t('voya.order.summaryPayableAmount')}
                 </Typography.Text>
                 <Typography.Text className={styles.amountValue}>
-                  {formatAmount(totalPaidAmount)}
+                  {formatAmount(detail.payment.payableAmount)}
                 </Typography.Text>
               </div>
             </Flex>
@@ -509,23 +691,6 @@ export default function OrderDetailPage() {
                     <RegistrationSourceTag
                       source={order.entryChannel as RegistrationSource}
                     />
-                  ),
-                },
-                {
-                  key: 'procurementChannel',
-                  label: t('voya.order.procurementChannel'),
-                  children: order.procurementChannel,
-                },
-                {
-                  key: 'purchaseOrderNo',
-                  label: t('voya.order.purchaseOrderNo'),
-                  children: (
-                    <Typography.Text
-                      code
-                      copyable={{ text: order.purchaseOrderNo }}
-                    >
-                      {order.purchaseOrderNo}
-                    </Typography.Text>
                   ),
                 },
                 {
@@ -636,45 +801,385 @@ export default function OrderDetailPage() {
                 <Typography.Text strong>
                   {t('voya.order.paymentRecords')}
                 </Typography.Text>
-                <Table<VehiclePaymentRecord>
+                <Table<PaymentDetailRecord>
                   columns={paymentColumns}
-                  dataSource={detail.payment.records}
+                  dataSource={paymentDetailRecords}
                   pagination={false}
                   rowKey="id"
-                  scroll={{ x: 1010 }}
+                  scroll={{ x: 1190 }}
                   size="small"
                 />
               </div>
-
-              <div>
-                <Typography.Text strong>
-                  {t('voya.order.couponUsage')}
-                </Typography.Text>
-                {detail.payment.coupons.length ? (
-                  <Flex vertical gap="small">
-                    {detail.payment.coupons.map((coupon) => (
-                      <div className={styles.couponRecord} key={coupon.id}>
-                        <Space size="small" wrap>
-                          <Tag color="blue">{coupon.code}</Tag>
-                          <Typography.Text type="success">
-                            -
-                            {formatAmount(
-                              coupon.discountAmount,
-                              coupon.currency,
-                            )}
-                          </Typography.Text>
-                        </Space>
-                        <LocalizedDateTime value={coupon.usedAt} />
-                      </div>
-                    ))}
-                  </Flex>
-                ) : (
-                  <Typography.Paragraph type="secondary">
-                    {t('voya.order.noCoupon')}
-                  </Typography.Paragraph>
-                )}
-              </div>
             </Flex>
+          </Card>
+
+          <Card
+            className={`${styles.surfaceCard} ${styles.detailSection}`}
+            id="procurement-info"
+            size="small"
+            title={sectionTitle(
+              <ShoppingCartOutlined />,
+              t('voya.order.procurementInfo'),
+            )}
+          >
+            {isAwaitingPayment ? (
+              <Alert
+                description={t('voya.order.procurementAwaitingPayment')}
+                showIcon
+                title={t('voya.order.procurementUnavailableTitle')}
+                type="info"
+              />
+            ) : procurementFulfillment && detail.procurement ? (
+              <Flex vertical gap="middle">
+                <Descriptions
+                  column={{ xs: 1, sm: 2, lg: 4 }}
+                  size="small"
+                  items={[
+                    {
+                      key: 'channel',
+                      label: t('voya.order.procurementChannel'),
+                      children: detail.procurement.channel,
+                    },
+                    {
+                      key: 'purchaseOrderNo',
+                      label: t('voya.order.purchaseOrderNo'),
+                      children: (
+                        <Typography.Text
+                          code
+                          copyable={{
+                            text: detail.procurement.purchaseOrderNo,
+                          }}
+                        >
+                          {detail.procurement.purchaseOrderNo}
+                        </Typography.Text>
+                      ),
+                    },
+                    {
+                      key: 'purchasePrice',
+                      label: t('voya.order.procurementPurchasePrice'),
+                      children: formatAmount(
+                        procurementFulfillment.purchasePriceCny,
+                        'CNY',
+                      ),
+                    },
+                    {
+                      key: 'convertedCost',
+                      label: intl.formatMessage(
+                        { id: 'voya.order.procurementConvertedCost' },
+                        { currency: order.currency },
+                      ),
+                      children: formatAmount(convertedProcurementCost),
+                    },
+                  ]}
+                />
+
+                <fieldset
+                  aria-label={intl.formatMessage(
+                    { id: 'voya.order.procurementFormulaAria' },
+                    {
+                      grossProfit: formatAmount(procurementGrossProfit),
+                      paidAmount: formatAmount(totalPaidAmount),
+                      fee: formatAmount(totalProcessingFee),
+                      cost: formatAmount(convertedProcurementCost),
+                    },
+                  )}
+                  className={styles.procurementFormula}
+                >
+                  <div className={styles.procurementFormulaTerm}>
+                    <Typography.Text type="secondary">
+                      {t('voya.order.procurementGrossProfit')}
+                    </Typography.Text>
+                    <Typography.Text strong>
+                      {formatAmount(procurementGrossProfit)}
+                    </Typography.Text>
+                  </div>
+                  <Typography.Text
+                    className={styles.procurementFormulaOperator}
+                  >
+                    =
+                  </Typography.Text>
+                  <div className={styles.procurementFormulaTerm}>
+                    <Typography.Text type="secondary">
+                      {t('voya.order.procurementUserPaid')}
+                    </Typography.Text>
+                    <Typography.Text strong>
+                      {formatAmount(totalPaidAmount)}
+                    </Typography.Text>
+                  </div>
+                  <Typography.Text
+                    className={styles.procurementFormulaOperator}
+                  >
+                    −
+                  </Typography.Text>
+                  <div className={styles.procurementFormulaTerm}>
+                    <Typography.Text type="secondary">
+                      {t('voya.order.procurementPaymentFee')}
+                    </Typography.Text>
+                    <Typography.Text strong>
+                      {formatAmount(totalProcessingFee)}
+                    </Typography.Text>
+                  </div>
+                  <Typography.Text
+                    className={styles.procurementFormulaOperator}
+                  >
+                    −
+                  </Typography.Text>
+                  <div className={styles.procurementFormulaTerm}>
+                    <Typography.Text type="secondary">
+                      {intl.formatMessage(
+                        { id: 'voya.order.procurementConvertedCost' },
+                        { currency: order.currency },
+                      )}
+                    </Typography.Text>
+                    <Typography.Text strong>
+                      {formatAmount(convertedProcurementCost)}
+                    </Typography.Text>
+                  </div>
+                </fieldset>
+
+                <section className={styles.procurementSubsection}>
+                  <div className={styles.procurementSubsectionHeader}>
+                    {sectionTitle(
+                      <UserOutlined />,
+                      t('voya.order.procurementGuideProfile'),
+                    )}
+                  </div>
+                  <div className={styles.procurementSubsectionBody}>
+                    <Descriptions
+                      bordered
+                      column={{ xs: 1, sm: 2, lg: 4 }}
+                      layout="vertical"
+                      size="small"
+                      items={[
+                        {
+                          key: 'guideName',
+                          label: t('voya.order.procurementGuideName'),
+                          children: procurementFulfillment.guide.name,
+                        },
+                        {
+                          key: 'guideAge',
+                          label: t('voya.order.procurementGuideAge'),
+                          children: intl.formatMessage(
+                            { id: 'voya.order.procurementGuideAgeValue' },
+                            { age: procurementFulfillment.guide.age },
+                          ),
+                        },
+                        {
+                          key: 'guideGender',
+                          label: t('voya.order.procurementGuideGender'),
+                          children: t(
+                            `voya.user.gender.${procurementFulfillment.guide.gender}`,
+                          ),
+                        },
+                        {
+                          key: 'guideNationality',
+                          label: t('voya.order.procurementGuideNationality'),
+                          children: procurementFulfillment.guide.nationality,
+                        },
+                        {
+                          key: 'guideRating',
+                          label: t('voya.order.procurementGuideRating'),
+                          span: { xs: 1, sm: 2, lg: 2 },
+                          children: (
+                            <Space size="small">
+                              <Rate
+                                allowHalf
+                                character={<StarOutlined />}
+                                disabled
+                                size="small"
+                                value={
+                                  procurementFulfillment.guide.serviceRating
+                                }
+                              />
+                              <Typography.Text strong>
+                                {intl.formatNumber(
+                                  procurementFulfillment.guide.serviceRating,
+                                  {
+                                    minimumFractionDigits: 1,
+                                    maximumFractionDigits: 1,
+                                  },
+                                )}
+                              </Typography.Text>
+                            </Space>
+                          ),
+                        },
+                        {
+                          key: 'guidePhone',
+                          label: t('voya.order.procurementGuidePhone'),
+                          children: (
+                            <Typography.Text
+                              copyable={{
+                                text: `${procurementFulfillment.guide.countryCode} ${procurementFulfillment.guide.phone}`,
+                              }}
+                            >
+                              <PhoneOutlined />{' '}
+                              {procurementFulfillment.guide.countryCode}{' '}
+                              {procurementFulfillment.guide.phone}
+                            </Typography.Text>
+                          ),
+                        },
+                        {
+                          key: 'guideWhatsApp',
+                          label: t('voya.order.procurementGuideWhatsApp'),
+                          children: (
+                            <Typography.Text
+                              copyable={{
+                                text: procurementFulfillment.guide.whatsApp,
+                              }}
+                            >
+                              <WhatsAppOutlined />{' '}
+                              {procurementFulfillment.guide.whatsApp}
+                            </Typography.Text>
+                          ),
+                        },
+                      ]}
+                    />
+                  </div>
+                </section>
+
+                <section className={styles.procurementSubsection}>
+                  <div className={styles.procurementSubsectionHeader}>
+                    {sectionTitle(
+                      <CarOutlined />,
+                      t('voya.order.procurementVehicleInfo'),
+                    )}
+                  </div>
+                  <div
+                    className={`${styles.procurementSubsectionBody} ${styles.procurementVehicleLayout}`}
+                  >
+                    <figure className={styles.procurementVehicleFigure}>
+                      <Image
+                        alt={intl.formatMessage(
+                          { id: 'voya.order.procurementVehiclePhotoAlt' },
+                          {
+                            model: `${procurementFulfillment.vehicle.brand} ${procurementFulfillment.vehicle.model}`,
+                            registrationNumber:
+                              procurementFulfillment.vehicle.registrationNumber,
+                          },
+                        )}
+                        height={148}
+                        preview={{ focusTrap: true }}
+                        src={procurementFulfillment.vehicle.photoUrl}
+                        styles={{ image: { objectFit: 'cover' } }}
+                        width={232}
+                      />
+                      <figcaption>
+                        <Typography.Text type="secondary">
+                          {t('voya.order.procurementVehiclePreviewHint')}
+                        </Typography.Text>
+                      </figcaption>
+                    </figure>
+                    <Descriptions
+                      bordered
+                      className={styles.procurementVehicleDetails}
+                      column={{ xs: 1, sm: 2 }}
+                      layout="vertical"
+                      size="small"
+                      items={[
+                        {
+                          key: 'vehicleModel',
+                          label: t('voya.order.procurementVehicleModel'),
+                          children: `${procurementFulfillment.vehicle.brand} ${procurementFulfillment.vehicle.model}`,
+                        },
+                        {
+                          key: 'vehicleRegistration',
+                          label: t('voya.order.procurementVehicleRegistration'),
+                          children: (
+                            <Typography.Text
+                              code
+                              copyable={{
+                                text: procurementFulfillment.vehicle
+                                  .registrationNumber,
+                              }}
+                            >
+                              {
+                                procurementFulfillment.vehicle
+                                  .registrationNumber
+                              }
+                            </Typography.Text>
+                          ),
+                        },
+                        {
+                          key: 'vehicleSeats',
+                          label: t('voya.order.procurementVehicleSeats'),
+                          children: intl.formatMessage(
+                            { id: 'voya.order.procurementSeatCount' },
+                            { count: procurementFulfillment.vehicle.seatCount },
+                          ),
+                        },
+                        {
+                          key: 'vehicleLuggage',
+                          label: t('voya.order.procurementVehicleLuggage'),
+                          children: intl.formatMessage(
+                            { id: 'voya.order.procurementLuggageCount' },
+                            {
+                              count:
+                                procurementFulfillment.vehicle.luggageCount,
+                            },
+                          ),
+                        },
+                      ]}
+                    />
+                  </div>
+                </section>
+              </Flex>
+            ) : detail.procurement ? (
+              <Descriptions
+                column={{ xs: 1, sm: 2, lg: 3 }}
+                size="small"
+                items={[
+                  {
+                    key: 'channel',
+                    label: t('voya.order.procurementChannel'),
+                    children: detail.procurement.channel,
+                  },
+                  {
+                    key: 'purchaseOrderNo',
+                    label: t('voya.order.purchaseOrderNo'),
+                    children: (
+                      <Typography.Text
+                        code
+                        copyable={{ text: detail.procurement.purchaseOrderNo }}
+                      >
+                        {detail.procurement.purchaseOrderNo}
+                      </Typography.Text>
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    label: t('voya.order.procurementStatus'),
+                    children: (
+                      <Space size="small" wrap>
+                        <Tag color="processing">
+                          {t('voya.order.status.matching')}
+                        </Tag>
+                        <Button
+                          onClick={() => setIsQuoteDrawerOpen(true)}
+                          size="small"
+                        >
+                          {intl.formatMessage(
+                            { id: 'voya.order.procurementQuoteCount' },
+                            {
+                              count: detail.procurement.guideQuotes.length,
+                            },
+                          )}
+                        </Button>
+                      </Space>
+                    ),
+                  },
+                ]}
+              />
+            ) : (
+              <Alert
+                description={intl.formatMessage(
+                  { id: 'voya.order.procurementUnavailableForStatus' },
+                  { status: t(`voya.order.status.${order.status}`) },
+                )}
+                showIcon
+                title={t('voya.order.procurementUnavailableTitle')}
+                type="info"
+              />
+            )}
           </Card>
 
           <Card
@@ -852,6 +1357,229 @@ export default function OrderDetailPage() {
           </Card>
         </div>
       </div>
+
+      <Drawer
+        closable={{
+          'aria-label': t('voya.order.procurementQuoteDrawerClose'),
+        }}
+        destroyOnHidden
+        onClose={() => setIsQuoteDrawerOpen(false)}
+        open={isQuoteDrawerOpen}
+        size="large"
+        styles={{ body: { background: token.colorBgLayout } }}
+        title={t('voya.order.procurementQuoteDrawerTitle')}
+      >
+        <Flex vertical gap="middle">
+          <Alert
+            description={t('voya.order.procurementPaidCnyDescription')}
+            showIcon
+            title={intl.formatMessage(
+              { id: 'voya.order.procurementPaidCny' },
+              { amount: formatAmount(totalPaidAmountCny, 'CNY') },
+            )}
+            type="success"
+          />
+          <Flex vertical gap="small">
+            {detail.procurement?.guideQuotes.map((quote) => {
+              const isSelected = selectedGuideQuoteId === quote.id;
+              const quoteInPaymentCurrency = convertCnyToPaymentCurrency(
+                quote.priceCny,
+                paymentCurrencyExchangeRateToCny,
+              );
+
+              return (
+                <Card
+                  extra={
+                    <Button
+                      aria-pressed={isSelected}
+                      icon={isSelected ? <CheckOutlined /> : undefined}
+                      onClick={() =>
+                        selectGuideQuote(quote.id, quote.guideName)
+                      }
+                      size="small"
+                    >
+                      {t(
+                        isSelected
+                          ? 'voya.order.procurementQuoteSelected'
+                          : 'voya.order.procurementSelectQuote',
+                      )}
+                    </Button>
+                  }
+                  key={quote.id}
+                  size="small"
+                  title={
+                    <Space size="small">
+                      <TeamOutlined />
+                      <Typography.Text strong>
+                        {quote.guideName}
+                      </Typography.Text>
+                    </Space>
+                  }
+                >
+                  <Descriptions
+                    column={{ xs: 1, sm: 2 }}
+                    size="small"
+                    items={[
+                      {
+                        key: 'guideId',
+                        label: t('voya.order.procurementGuideId'),
+                        children: (
+                          <Typography.Text code copyable>
+                            {quote.guideId}
+                          </Typography.Text>
+                        ),
+                      },
+                      {
+                        key: 'supplierQuote',
+                        label: t('voya.order.procurementSupplierQuote'),
+                        children: (
+                          <Typography.Text strong>
+                            {formatAmount(quote.priceCny, 'CNY')}
+                          </Typography.Text>
+                        ),
+                      },
+                      {
+                        key: 'paymentCurrencyQuote',
+                        label: intl.formatMessage(
+                          {
+                            id: 'voya.order.procurementQuotePaymentCurrency',
+                          },
+                          { currency: order.currency },
+                        ),
+                        children: (
+                          <Typography.Text strong>
+                            {formatAmount(
+                              quoteInPaymentCurrency,
+                              order.currency,
+                            )}
+                          </Typography.Text>
+                        ),
+                      },
+                      {
+                        key: 'registrationNumber',
+                        label: t('voya.order.procurementVehicleRegistration'),
+                        children: (
+                          <Typography.Text code copyable>
+                            {quote.vehicle.registrationNumber}
+                          </Typography.Text>
+                        ),
+                      },
+                      {
+                        key: 'brand',
+                        label: t('voya.order.procurementVehicleBrand'),
+                        children: quote.vehicle.brand,
+                      },
+                      {
+                        key: 'model',
+                        label: t('voya.order.procurementVehicleModel'),
+                        children: quote.vehicle.model,
+                      },
+                      {
+                        key: 'seatCount',
+                        label: t('voya.order.procurementVehicleSeats'),
+                        children: intl.formatMessage(
+                          { id: 'voya.order.procurementSeatCount' },
+                          { count: quote.vehicle.seatCount },
+                        ),
+                      },
+                      {
+                        key: 'luggageCount',
+                        label: t('voya.order.procurementVehicleLuggage'),
+                        children: intl.formatMessage(
+                          { id: 'voya.order.procurementLuggageCount' },
+                          { count: quote.vehicle.luggageCount },
+                        ),
+                      },
+                    ]}
+                  />
+                </Card>
+              );
+            })}
+          </Flex>
+        </Flex>
+      </Drawer>
+
+      <Modal
+        cancelText={t('voya.common.cancel')}
+        destroyOnHidden
+        okButtonProps={{ disabled: !selectedReceipt }}
+        okText={t('voya.order.collectConfirm')}
+        onCancel={closeCollectModal}
+        onOk={collectPayment}
+        open={isCollectModalOpen}
+        title={t('voya.order.collectTitle')}
+      >
+        <Flex vertical gap="middle">
+          <Typography.Paragraph type="secondary">
+            {intl.formatMessage(
+              { id: 'voya.order.collectDescription' },
+              { orderId: order.id },
+            )}
+          </Typography.Paragraph>
+          <Alert
+            showIcon
+            type="info"
+            title={intl.formatMessage(
+              { id: 'voya.order.collectCurrencyRule' },
+              { currency: order.currency },
+            )}
+          />
+          <Flex vertical gap="small">
+            <Typography.Text strong>
+              {t('voya.order.collectTransactionLabel')}
+            </Typography.Text>
+            <Select
+              aria-label={t('voya.order.collectTransactionLabel')}
+              notFoundContent={t('voya.order.collectNoTransactions')}
+              onChange={setSelectedTransactionId}
+              options={availableReceipts.map((receipt) => ({
+                label: intl.formatMessage(
+                  { id: 'voya.order.collectOption' },
+                  {
+                    transactionId: receipt.transactionId,
+                    amount: formatAmount(receipt.amount, receipt.currency),
+                    orderId: receipt.orderId ?? t('voya.receipt.unboundOrder'),
+                  },
+                ),
+                value: receipt.transactionId,
+              }))}
+              placeholder={t('voya.order.collectTransactionPlaceholder')}
+              showSearch={{ optionFilterProp: 'label' }}
+              value={selectedTransactionId}
+            />
+          </Flex>
+          {selectedReceipt ? (
+            <Descriptions
+              bordered
+              column={1}
+              size="small"
+              items={[
+                {
+                  key: 'sourceOrder',
+                  label: t('voya.order.collectCurrentOrder'),
+                  children:
+                    selectedReceipt.orderId ?? t('voya.receipt.unboundOrder'),
+                },
+                {
+                  key: 'amount',
+                  label: t('voya.order.collectOriginalAmount'),
+                  children: formatAmount(
+                    selectedReceipt.amount,
+                    selectedReceipt.currency,
+                  ),
+                },
+                {
+                  key: 'paidAt',
+                  label: t('voya.order.paidAt'),
+                  children: (
+                    <LocalizedDateTime value={selectedReceipt.paidAt} />
+                  ),
+                },
+              ]}
+            />
+          ) : null}
+        </Flex>
+      </Modal>
     </PageContainer>
   );
 }

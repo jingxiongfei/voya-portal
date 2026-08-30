@@ -12,6 +12,7 @@ export default {
   'menu.users.detail': 'User details',
   'menu.operations': 'Operations',
   'menu.operations.coupons': 'Coupon management',
+  'menu.operations.pricing-strategies': 'Pricing strategy',
   'menu.finance': 'Finance',
   'menu.finance.payment-receipts': 'Payment receipts',
   'menu.orders': 'Order centre',

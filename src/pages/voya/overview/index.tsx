@@ -9,6 +9,7 @@ import { history, useIntl } from '@umijs/max';
 import type { TableColumnsType } from 'antd';
 import { Alert, Button, Flex, Table, Typography } from 'antd';
 import {
+  compactTablePagination,
   DataCard,
   InitialAvatar,
   LocalizedDateTime,
@@ -135,7 +136,7 @@ export default function OverviewPage() {
             rowKey="id"
             columns={userColumns}
             dataSource={users.slice(0, 4)}
-            pagination={false}
+            pagination={compactTablePagination}
             size="middle"
             scroll={{ x: 720 }}
           />
@@ -153,7 +154,7 @@ export default function OverviewPage() {
             rowKey="id"
             columns={orderColumns}
             dataSource={vehicleOrders.slice(0, 4)}
-            pagination={false}
+            pagination={compactTablePagination}
             size="middle"
             scroll={{ x: 720 }}
           />

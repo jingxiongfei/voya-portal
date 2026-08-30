@@ -5,10 +5,9 @@ import {
   EyeOutlined,
   LinkOutlined,
   RollbackOutlined,
-  SwapOutlined,
 } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
-import { history, useIntl } from '@umijs/max';
+import { history, useIntl, useModel } from '@umijs/max';
 import type { TableColumnsType } from 'antd';
 import {
   Alert,
@@ -21,18 +20,22 @@ import {
   Dropdown,
   Form,
   Modal,
-  Popover,
   Select,
   Space,
   Table,
-  Timeline,
   Tooltip,
   Typography,
 } from 'antd';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { DataCard, FilterCard, LocalizedDateTime } from '../components';
+import {
+  DataCard,
+  defaultTablePagination,
+  FilterCard,
+  LocalizedDateTime,
+} from '../components';
 import { type VehiclePaymentMethod, vehicleOrders } from '../mockData';
+import { ReceiptBindingHistoryPopover } from '../ReceiptBindingHistoryPopover';
 import { useVoyaPageStyles } from '../styles';
 import { type PaymentReceiptRecord, paymentReceipts } from './_mock';
 import {
@@ -68,6 +71,7 @@ export default function PaymentReceiptsPage() {
   const [form] = Form.useForm<PaymentReceiptFilters>();
   const [bindForm] = Form.useForm<BindOrderFormValues>();
   const intl = useIntl();
+  const { initialState } = useModel('@@initialState');
   const { message, modal } = App.useApp();
   const { styles } = useVoyaPageStyles();
   const t = (id: string) => intl.formatMessage({ id });
@@ -116,11 +120,13 @@ export default function PaymentReceiptsPage() {
       return;
     }
 
-    const reboundAt = dayjs().format('YYYY-MM-DD HH:mm');
+    const operatedAt = dayjs().format('YYYY-MM-DD HH:mm');
+    const operator =
+      initialState?.currentUser?.name ?? t('voya.receipt.operator.system');
     setReceipts((currentReceipts) =>
       currentReceipts.map((currentReceipt) =>
         currentReceipt.id === bindingReceipt.id
-          ? bindReceiptToOrder(currentReceipt, order, reboundAt)
+          ? bindReceiptToOrder(currentReceipt, order, operatedAt, operator)
           : currentReceipt,
       ),
     );
@@ -310,58 +316,10 @@ export default function PaymentReceiptsPage() {
       render: (orderId: string | undefined, receipt) =>
         orderId ? (
           <span className={styles.receiptBoundOrder}>
-            {receipt.bindingHistory.length > 0 ? (
-              <Popover
-                destroyOnHidden
-                placement="bottomLeft"
-                title={t('voya.receipt.rebindingHistory')}
-                trigger={['click', 'focus']}
-                content={
-                  <div className={styles.receiptBindingHistory}>
-                    <Timeline
-                      reverse
-                      items={receipt.bindingHistory.map((historyRecord) => ({
-                        content: (
-                          <div className={styles.receiptBindingHistoryItem}>
-                            <div className={styles.receiptBindingHistoryRoute}>
-                              <Typography.Text type="secondary">
-                                {t('voya.receipt.previousOrder')}
-                              </Typography.Text>
-                              <Typography.Text>
-                                {historyRecord.fromOrderId}
-                              </Typography.Text>
-                              <Typography.Text type="secondary">
-                                {t('voya.receipt.reboundOrder')}
-                              </Typography.Text>
-                              <Typography.Text>
-                                {historyRecord.toOrderId}
-                              </Typography.Text>
-                              <Typography.Text type="secondary">
-                                {t('voya.receipt.reboundAt')}
-                              </Typography.Text>
-                              <LocalizedDateTime
-                                value={historyRecord.reboundAt}
-                              />
-                            </div>
-                          </div>
-                        ),
-                      }))}
-                    />
-                  </div>
-                }
-              >
-                <Button
-                  aria-label={intl.formatMessage(
-                    { id: 'voya.receipt.viewRebindingHistory' },
-                    { orderId },
-                  )}
-                  className={styles.receiptRebindingButton}
-                  icon={<SwapOutlined />}
-                  size="small"
-                  type="text"
-                />
-              </Popover>
-            ) : null}
+            <ReceiptBindingHistoryPopover
+              bindingHistory={receipt.bindingHistory}
+              orderId={orderId}
+            />
             <Button
               className={
                 receipt.bindingHistory.length > 0
@@ -530,13 +488,7 @@ export default function PaymentReceiptsPage() {
             <Table<PaymentReceiptRecord>
               columns={columns}
               dataSource={filteredReceipts}
-              pagination={{
-                defaultPageSize: 10,
-                hideOnSinglePage: true,
-                pageSizeOptions: [10, 20, 50],
-                showQuickJumper: true,
-                showSizeChanger: true,
-              }}
+              pagination={defaultTablePagination}
               rowKey="id"
               scroll={{ x: 1900 }}
               size="small"

@@ -74,6 +74,86 @@ describe('vehicle order details', () => {
       ) ?? 0;
 
     expect(pendingOrder?.paymentTimeRemaining).toBe('23:00');
+    expect(pendingOrder?.paymentDeadline).toBe('2026-08-21 10:02');
     expect(paidAmount).toBeLessThan(pendingDetail?.payment.payableAmount ?? 0);
+    expect(pendingDetail?.procurement).toBeUndefined();
+    expect(
+      pendingDetail?.logs.some((log) => log.action === 'procurementSubmitted'),
+    ).toBe(false);
+  });
+
+  it('provides procurement and guide quotations for the matching order', () => {
+    const matchingOrder = vehicleOrders.find(
+      (vehicleOrder) => vehicleOrder.status === 'matching',
+    );
+    const matchingDetail = matchingOrder
+      ? vehicleOrderDetails[matchingOrder.id]
+      : undefined;
+
+    expect(matchingDetail?.procurement?.channel).toBe('Voya Direct');
+    expect(matchingDetail?.procurement?.purchaseOrderNo).toBe('PO-VD-26082119');
+    expect(matchingDetail?.procurement?.guideQuotes).toHaveLength(3);
+    expect(
+      matchingDetail?.procurement?.guideQuotes.every(
+        (quote) =>
+          quote.priceCny > 0 &&
+          quote.vehicle.registrationNumber.length > 0 &&
+          quote.vehicle.brand.length > 0 &&
+          quote.vehicle.model.length > 0 &&
+          quote.vehicle.seatCount > 0 &&
+          quote.vehicle.luggageCount > 0,
+      ),
+    ).toBe(true);
+    expect(
+      matchingDetail?.logs.some((log) => log.action === 'procurementSubmitted'),
+    ).toBe(true);
+  });
+
+  it('provides fulfilled procurement details for travel lifecycle orders', () => {
+    const fulfilledStatuses = [
+      'pendingTravel',
+      'inTravel',
+      'completed',
+    ] as const;
+
+    for (const status of fulfilledStatuses) {
+      const fulfilledOrder = vehicleOrders.find(
+        (vehicleOrder) => vehicleOrder.status === status,
+      );
+      const fulfillment = fulfilledOrder
+        ? vehicleOrderDetails[fulfilledOrder.id].procurement?.fulfillment
+        : undefined;
+
+      expect(fulfillment?.purchasePriceCny).toBeGreaterThan(0);
+      expect(fulfillment?.guide.name.length).toBeGreaterThan(0);
+      expect(fulfillment?.guide.serviceRating).toBeGreaterThanOrEqual(0);
+      expect(fulfillment?.guide.serviceRating).toBeLessThanOrEqual(5);
+      expect(fulfillment?.guide.whatsApp.length).toBeGreaterThan(0);
+      expect(fulfillment?.vehicle.photoUrl).toBe(
+        '/vehicles/guide-vehicle-v-class.jpg',
+      );
+      expect(fulfillment?.vehicle.registrationNumber.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('provides one demo order for every lifecycle status', () => {
+    const lifecycleStatuses = [
+      'pendingPayment',
+      'matching',
+      'onHold',
+      'unpaid',
+      'cancelled',
+      'voided',
+      'pendingTravel',
+      'inTravel',
+      'completed',
+    ] as const;
+
+    expect(vehicleOrders).toHaveLength(lifecycleStatuses.length);
+    for (const status of lifecycleStatuses) {
+      expect(
+        vehicleOrders.filter((vehicleOrder) => vehicleOrder.status === status),
+      ).toHaveLength(1);
+    }
   });
 });

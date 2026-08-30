@@ -16,7 +16,11 @@ import {
   Typography,
 } from 'antd';
 import { useState } from 'react';
-import { DataCard, LocalizedDateTime } from '../components';
+import {
+  DataCard,
+  defaultTablePagination,
+  LocalizedDateTime,
+} from '../components';
 import {
   type DepartmentRecord,
   departments as initialDepartments,
@@ -162,7 +166,7 @@ export default function DepartmentsPage() {
               rowKey="id"
               columns={columns}
               dataSource={records}
-              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+              pagination={defaultTablePagination}
               size="small"
               scroll={{ x: 980 }}
             />

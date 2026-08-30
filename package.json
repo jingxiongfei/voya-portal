@@ -3,6 +3,10 @@
   "version": "6.0.3",
   "private": true,
   "description": "Voya Explore enterprise administration portal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jingxiongfei/voya-portal.git"
+  },
   "scripts": {
     "analyze": "cross-env ANALYZE=1 max build",
     "build": "max build",

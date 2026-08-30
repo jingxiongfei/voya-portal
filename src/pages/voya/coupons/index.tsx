@@ -28,7 +28,13 @@ import {
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useState } from 'react';
-import { DataCard, FilterCard, LocalizedDateTime } from '../components';
+import {
+  compactTablePagination,
+  DataCard,
+  defaultTablePagination,
+  FilterCard,
+  LocalizedDateTime,
+} from '../components';
 import { useVoyaPageStyles } from '../styles';
 import {
   type CouponDiscountType,
@@ -477,13 +483,7 @@ export default function CouponsPage() {
               rowKey="id"
               columns={columns}
               dataSource={filteredRecords}
-              pagination={{
-                defaultPageSize: 10,
-                hideOnSinglePage: false,
-                pageSizeOptions: [10, 20, 50],
-                showQuickJumper: true,
-                showSizeChanger: true,
-              }}
+              pagination={defaultTablePagination}
               size="small"
               scroll={{ x: 1530 }}
             />
@@ -618,7 +618,7 @@ export default function CouponsPage() {
               rowKey="id"
               columns={usageColumns}
               dataSource={selectedUsageRecords}
-              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+              pagination={compactTablePagination}
               size="small"
               scroll={{ x: 975 }}
             />

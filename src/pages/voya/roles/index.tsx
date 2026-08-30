@@ -23,7 +23,11 @@ import {
 } from 'antd';
 import type { Key } from 'react';
 import { useMemo, useState } from 'react';
-import { DataCard, LocalizedDateTime } from '../components';
+import {
+  DataCard,
+  defaultTablePagination,
+  LocalizedDateTime,
+} from '../components';
 import {
   roles as initialRoles,
   permissionTreeData,
@@ -222,7 +226,7 @@ export default function RolesPage() {
             rowKey="id"
             columns={columns}
             dataSource={records}
-            pagination={{ pageSize: 10, hideOnSinglePage: true }}
+            pagination={defaultTablePagination}
             size="middle"
             scroll={{ x: 980 }}
           />

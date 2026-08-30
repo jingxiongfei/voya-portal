@@ -17,6 +17,7 @@ import {
 import { useState } from 'react';
 import {
   DataCard,
+  defaultTablePagination,
   FilterCard,
   LocalizedDateTime,
   RegistrationSourceTag,
@@ -217,13 +218,7 @@ export default function UsersPage() {
               rowKey="id"
               columns={columns}
               dataSource={filteredUsers}
-              pagination={{
-                defaultPageSize: 10,
-                hideOnSinglePage: false,
-                pageSizeOptions: [10, 20, 50],
-                showQuickJumper: true,
-                showSizeChanger: true,
-              }}
+              pagination={defaultTablePagination}
               size="small"
               scroll={{ x: 1540 }}
             />

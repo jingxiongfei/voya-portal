@@ -86,6 +86,12 @@ export default [
         component: './voya/coupons',
       },
       {
+        path: '/operations/pricing-strategies',
+        name: 'pricing-strategies',
+        icon: 'calculator',
+        component: './voya/pricing-strategies',
+      },
+      {
         path: '/operations/payment-receipts',
         hideInMenu: true,
         redirect: '/finance/payment-receipts',

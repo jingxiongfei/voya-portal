@@ -212,19 +212,26 @@ ol {
   list-style: none;
 }
 
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td {
+  white-space: nowrap;
+}
+
+.ant-typography-copy,
+.ant-typography .ant-typography-copy {
+  color: var(--ant-color-text-tertiary);
+}
+
+.ant-typography-copy:hover,
+.ant-typography-copy:focus,
+.ant-typography .ant-typography-copy:hover,
+.ant-typography .ant-typography-copy:focus {
+  color: var(--ant-color-text-secondary);
+}
+
 @media (max-width: 768px) {
   .ant-table {
     width: 100%;
     overflow-x: auto;
-    &-thead > tr,
-    &-tbody > tr {
-      > th,
-      > td {
-        white-space: pre;
-        > span {
-          display: block;
-        }
-      }
-    }
   }
 }

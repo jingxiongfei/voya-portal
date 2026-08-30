@@ -16,7 +16,11 @@ import {
   Tag,
 } from 'antd';
 import { useState } from 'react';
-import { DataCard, LocalizedDateTime } from '../components';
+import {
+  DataCard,
+  defaultTablePagination,
+  LocalizedDateTime,
+} from '../components';
 import { userTags as initialTags, type UserTagRecord } from '../mockData';
 import { useVoyaPageStyles } from '../styles';
 
@@ -154,7 +158,7 @@ export default function TagsPage() {
               rowKey="id"
               columns={columns}
               dataSource={records}
-              pagination={{ pageSize: 10, hideOnSinglePage: true }}
+              pagination={defaultTablePagination}
               size="small"
               scroll={{ x: 850 }}
             />

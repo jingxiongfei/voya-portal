@@ -17,6 +17,7 @@ import {
 import { useState } from 'react';
 import {
   DataCard,
+  defaultTablePagination,
   FilterCard,
   InitialAvatar,
   LocalizedDateTime,
@@ -232,7 +233,7 @@ export default function AccountsPage() {
             rowKey="id"
             columns={columns}
             dataSource={filteredRecords}
-            pagination={{ pageSize: 10, hideOnSinglePage: true }}
+            pagination={defaultTablePagination}
             size="middle"
             scroll={{ x: 1180 }}
           />

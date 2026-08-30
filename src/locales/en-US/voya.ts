@@ -132,12 +132,12 @@ export default {
   'voya.receipt.orderTimeRange': 'Order time range',
   'voya.receipt.moreActions': 'More actions',
   'voya.receipt.unboundOrder': 'No linked order',
-  'voya.receipt.rebindingHistory': 'Rebinding history',
-  'voya.receipt.viewRebindingHistory':
-    'View rebinding history for order {orderId}',
-  'voya.receipt.previousOrder': 'Previous order',
-  'voya.receipt.reboundOrder': 'Rebound to',
-  'voya.receipt.reboundAt': 'Rebound at',
+  'voya.receipt.bindingHistoryTitle': 'Binding history ({count})',
+  'voya.receipt.viewBindingHistory':
+    'View {count} binding history records for order {orderId}',
+  'voya.receipt.originalOrder': 'Original order',
+  'voya.receipt.operator': 'Operator',
+  'voya.receipt.operator.system': 'System',
   'voya.receipt.action.unbind': 'Unlink',
   'voya.receipt.action.unbindConfirmTitle': 'Unlink this transaction?',
   'voya.receipt.action.unbindDescription':
@@ -209,6 +209,47 @@ export default {
   'voya.coupon.deleteDescription':
     'The coupon will be removed from the current demo list. Existing usage history will be retained.',
 
+  'voya.pricing.title': 'Pricing strategy',
+  'voya.pricing.subtitle':
+    'Set gross-margin rules by selling currency and preview foreign-currency prices',
+  'voya.pricing.notice':
+    'Supplier costs are recorded in Chinese yuan (CNY). Selling prices convert the cost using the latest effective rate, then apply the configured gross margin. Final settlement rules are pending confirmation.',
+  'voya.pricing.formula':
+    'Example price = CNY supplier cost ÷ CNY conversion rate ÷ (1 - gross margin)',
+  'voya.pricing.previewCost': 'Preview supplier cost',
+  'voya.pricing.previewHint':
+    'Change the cost to update example prices in the list.',
+  'voya.pricing.list': 'Currency pricing rules',
+  'voya.pricing.create': 'Create pricing strategy',
+  'voya.pricing.edit': 'Edit pricing strategy',
+  'voya.pricing.supplyChain': 'Supply chain',
+  'voya.pricing.supplyChain.pureGuide': 'Pure Guide',
+  'voya.pricing.supplyChain.globalRide': 'GlobalRide',
+  'voya.pricing.supplyChain.voyaDirect': 'Voya Direct',
+  'voya.pricing.supplyChain.localLink': 'LocalLink',
+  'voya.pricing.currency': 'Selling currency',
+  'voya.pricing.exchangeRate': 'CNY conversion rate',
+  'voya.pricing.exchangeRateReference': 'Reference: {date}',
+  'voya.pricing.grossMarginRate': 'Gross margin',
+  'voya.pricing.suggestedPrice': 'Example selling price',
+  'voya.pricing.effectiveAt': 'Effective at',
+  'voya.pricing.status.active': 'Active',
+  'voya.pricing.status.inactive': 'Inactive',
+  'voya.pricing.action.activate': 'Activate',
+  'voya.pricing.action.deactivate': 'Deactivate',
+  'voya.pricing.action.activateTitle':
+    'Activate the {currency} pricing strategy for {supplyChain}?',
+  'voya.pricing.action.deactivateTitle':
+    'Deactivate the {currency} pricing strategy for {supplyChain}?',
+  'voya.pricing.action.statusSuccess':
+    'The {currency} pricing strategy for {supplyChain} was updated',
+  'voya.pricing.duplicateCurrency':
+    'A strategy for this selling currency already exists in the selected supply chain',
+  'voya.pricing.marginRange':
+    'Gross margin must be at least 0% and less than 100%',
+  'voya.pricing.deleteDescription':
+    'The pricing strategy will be removed from the current demo list. Historical order prices are not changed.',
+
   'voya.user.title': 'User list',
   'voya.user.subtitle':
     'Find unique Voya identities created through the app, APIs and partners',
@@ -270,7 +311,7 @@ export default {
   'voya.order.subtitle':
     'Find vehicle orders by intake and procurement details',
   'voya.order.notice':
-    'Order statuses, detail fields and available actions are not confirmed. V1 shows only confirmed filters and list fields.',
+    'Order detail fields and available actions remain pending confirmation. This view shows the confirmed order statuses, filters and list fields.',
   'voya.order.id': 'Order number',
   'voya.order.entryChannel': 'Intake channel',
   'voya.order.procurementChannel': 'Procurement channel',
@@ -280,9 +321,31 @@ export default {
   'voya.order.thirdPartyOrderNo': 'Third-party order no.',
   'voya.order.type': 'Type',
   'voya.order.type.vehicle': 'Vehicle',
+  'voya.order.status': 'Order status',
   'voya.order.status.pendingPayment': 'Awaiting payment',
-  'voya.order.status.paid': 'Paid',
-  'voya.order.paymentTimeRemaining': '{time} remaining',
+  'voya.order.status.matching': 'Matching',
+  'voya.order.status.onHold': 'On hold',
+  'voya.order.status.unpaid': 'Unpaid',
+  'voya.order.status.cancelled': 'Cancelled',
+  'voya.order.status.voided': 'Voided',
+  'voya.order.status.pendingTravel': 'Awaiting travel',
+  'voya.order.status.inTravel': 'In travel',
+  'voya.order.status.completed': 'Completed',
+  'voya.order.statusFilter.title': 'Order status filters',
+  'voya.order.statusFilter.all': 'All',
+  'voya.order.statusFilter.paid': 'Paid',
+  'voya.order.statusFilter.pendingPayment': 'Awaiting payment',
+  'voya.order.statusFilter.matching': 'Matching',
+  'voya.order.statusFilter.onHold': 'On hold',
+  'voya.order.statusFilter.unpaid': 'Unpaid',
+  'voya.order.statusFilter.cancelled': 'Cancelled',
+  'voya.order.statusFilter.afterSales': 'After-sales',
+  'voya.order.statusFilter.voided': 'Voided',
+  'voya.order.statusFilter.pendingTravel': 'Awaiting travel',
+  'voya.order.statusFilter.inTravel': 'In travel',
+  'voya.order.statusFilter.completed': 'Completed',
+  'voya.order.paymentTimeRemaining': 'Payment due in {time}',
+  'voya.order.paymentDeadline': 'Payment deadline',
   'voya.order.amount': 'Amount',
   'voya.order.currency': 'Currency',
   'voya.order.orderedAt': 'Ordered at',
@@ -290,13 +353,66 @@ export default {
   'voya.order.list': 'Order list',
   'voya.order.detail': 'Order details',
   'voya.order.detailNotice':
-    'This is the first information structure with demo data. Order statuses, payment outcomes, fulfilment rules and log access remain pending confirmation.',
+    'This is the first information structure with demo data. Payment outcomes, fulfilment rules and log access remain pending confirmation.',
   'voya.order.orderInfo': 'Order information',
   'voya.order.customerInfo': 'Customer information',
   'voya.order.relatedOrders': 'Related order numbers',
   'voya.order.notFound': 'Order not found',
   'voya.order.bookerInfo': 'Booker information',
   'voya.order.paymentInfo': 'Payment information',
+  'voya.order.procurementInfo': 'Procurement order',
+  'voya.order.procurementUnavailableTitle': 'No procurement information yet',
+  'voya.order.procurementAwaitingPayment':
+    'Procurement begins after the order payment has been completed.',
+  'voya.order.procurementUnavailableForStatus':
+    'No procurement information is available while the order is “{status}”.',
+  'voya.order.procurementStatus': 'Procurement status',
+  'voya.order.procurementQuoteCount':
+    'Matching · {count} guides currently available',
+  'voya.order.procurementQuoteDrawerTitle': 'Guide quotations',
+  'voya.order.procurementQuoteDrawerClose': 'Close guide quotations',
+  'voya.order.procurementPaidCny':
+    'Payment received · {amount} equivalent in CNY',
+  'voya.order.procurementPaidCnyDescription':
+    'Supplier API quotations are returned in CNY, allowing direct comparison with the order’s collected payment.',
+  'voya.order.procurementGuide': 'Guide',
+  'voya.order.procurementGuideId': 'Guide ID',
+  'voya.order.procurementPurchasePrice': 'Procurement price',
+  'voya.order.procurementConvertedCost':
+    'Converted procurement cost ({currency})',
+  'voya.order.procurementGrossProfit': 'Gross profit',
+  'voya.order.procurementUserPaid': 'User paid amount',
+  'voya.order.procurementPaymentFee': 'Payment processing fee',
+  'voya.order.procurementFormulaAria':
+    'Gross profit {grossProfit} equals user paid amount {paidAmount}, minus payment processing fee {fee}, minus converted procurement cost {cost}',
+  'voya.order.procurementGuideProfile': 'Guide information',
+  'voya.order.procurementGuideName': 'Guide name',
+  'voya.order.procurementGuideAge': 'Age',
+  'voya.order.procurementGuideAgeValue': '{age} years old',
+  'voya.order.procurementGuideGender': 'Gender',
+  'voya.order.procurementGuideNationality': 'Nationality',
+  'voya.order.procurementGuideRating': 'Service rating',
+  'voya.order.procurementGuidePhone': 'Phone number',
+  'voya.order.procurementGuideWhatsApp': 'WhatsApp',
+  'voya.order.procurementVehicleInfo': 'Service vehicle',
+  'voya.order.procurementVehiclePhoto': 'Vehicle photo',
+  'voya.order.procurementVehiclePhotoAlt':
+    'Guide service vehicle {model}, registration {registrationNumber}',
+  'voya.order.procurementVehiclePreviewHint': 'Select the photo to preview',
+  'voya.order.procurementVehicleRegistration': 'Registration number',
+  'voya.order.procurementVehicleBrand': 'Brand',
+  'voya.order.procurementVehicleModel': 'Vehicle model',
+  'voya.order.procurementVehicleSeats': 'Seats',
+  'voya.order.procurementSeatCount': '{count} seats',
+  'voya.order.procurementVehicleLuggage': 'Luggage capacity',
+  'voya.order.procurementLuggageCount': '{count} pieces',
+  'voya.order.procurementSupplierQuote': 'Supplier quotation (CNY)',
+  'voya.order.procurementQuotePaymentCurrency':
+    'Equivalent in payment currency ({currency})',
+  'voya.order.procurementSelectQuote': 'Select',
+  'voya.order.procurementQuoteSelected': 'Selected',
+  'voya.order.procurementSelectSuccess':
+    'Selected the quotation from guide {guide}',
   'voya.order.bookingDetails': 'Booking details',
   'voya.order.travelerInfo': 'Traveller information',
   'voya.order.itineraryInfo': 'Itinerary',
@@ -305,6 +421,7 @@ export default {
   'voya.order.givenName': 'Given name',
   'voya.order.familyName': 'Family name',
   'voya.order.payableAmount': 'Amount payable',
+  'voya.order.summaryPayableAmount': 'Amount payable',
   'voya.order.totalPaidAmount': 'Total amount paid',
   'voya.order.paymentRecords': 'Payment records',
   'voya.order.paymentCurrency': 'Payment currency',
@@ -320,6 +437,27 @@ export default {
   'voya.order.paymentMethod.creditCard': 'Credit card',
   'voya.order.paymentMethod.digitalWallet': 'Digital wallet',
   'voya.order.paymentMethod.bankTransfer': 'Bank transfer',
+  'voya.order.paymentMethod.coupon': 'Coupon',
+  'voya.order.paymentReboundSource':
+    'This payment was collected from a rebound transaction',
+  'voya.order.action.collect': 'Collect payment',
+  'voya.order.collectTitle': 'Collect payment',
+  'voya.order.collectDescription':
+    'Select another payment transaction and rebind it to order {orderId}. Its original amount and payment time remain unchanged and are added to this order’s total paid amount; the source order no longer includes this payment.',
+  'voya.order.collectCurrencyRule':
+    'Only unrefunded transactions in this order’s settlement currency, {currency}, are shown.',
+  'voya.order.collectTransactionLabel': 'Payment transaction ID',
+  'voya.order.collectTransactionPlaceholder':
+    'Search and select a payment transaction ID',
+  'voya.order.collectNoTransactions':
+    'No eligible transactions in the same currency',
+  'voya.order.collectOption':
+    '{transactionId} · {amount} · currently linked to {orderId}',
+  'voya.order.collectCurrentOrder': 'Currently linked order',
+  'voya.order.collectOriginalAmount': 'Original transaction amount',
+  'voya.order.collectConfirm': 'Confirm collection',
+  'voya.order.collectSuccess':
+    'Transaction {transactionId} has been rebound to this order and the total paid amount has been updated',
   'voya.order.action.hold': 'Put on hold',
   'voya.order.action.holdConfirmTitle': 'Put this order on hold?',
   'voya.order.action.holdDescription':
@@ -388,6 +526,7 @@ export default {
   'voya.permission.exchangeRates': 'Exchange rates',
   'voya.permission.operations': 'Operations',
   'voya.permission.coupons': 'Coupon management',
+  'voya.permission.pricingStrategies': 'Pricing strategy',
   'voya.permission.finance': 'Finance',
   'voya.permission.paymentReceipts': 'Payment receipts',
   'voya.permission.users': 'User centre',

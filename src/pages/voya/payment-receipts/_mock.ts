@@ -25,9 +25,11 @@ export type PaymentReceiptRecord = {
 
 export type ReceiptBindingHistoryRecord = {
   id: string;
-  fromOrderId: string;
+  action: 'bind' | 'rebind';
+  fromOrderId?: string;
   toOrderId: string;
-  reboundAt: string;
+  operatedAt: string;
+  operator: string;
 };
 
 const activeUsdToCnyRate =
@@ -64,6 +66,9 @@ const processingFeesByTransaction: Record<string, number> = {
   'PAY-20260820-0974': 2.92,
   'PAY-20260820-0951': 98,
   'PAY-20260819-0902': 0.34,
+  'PAY-20260819-0896': 5.04,
+  'PAY-20260818-0864': 2.65,
+  'PAY-20260817-0801': 372,
 };
 
 const bindingHistoryByTransaction: Record<
@@ -73,9 +78,26 @@ const bindingHistoryByTransaction: Record<
   'PAY-20260819-0902': [
     {
       id: 'binding-PAY-20260819-0902-1',
-      fromOrderId: 'VO-20260819-0886',
+      action: 'bind',
+      toOrderId: 'VO-20260819-0896',
+      operatedAt: '2026-08-19 11:18',
+      operator: 'Leah Chen',
+    },
+    {
+      id: 'binding-PAY-20260819-0902-2',
+      action: 'rebind',
+      fromOrderId: 'VO-20260819-0896',
+      toOrderId: 'VO-20260818-0864',
+      operatedAt: '2026-08-19 11:42',
+      operator: 'Daniel Wong',
+    },
+    {
+      id: 'binding-PAY-20260819-0902-3',
+      action: 'rebind',
+      fromOrderId: 'VO-20260818-0864',
       toOrderId: 'VO-20260819-0902',
-      reboundAt: '2026-08-19 12:06',
+      operatedAt: '2026-08-19 12:06',
+      operator: 'Nora Liu',
     },
   ],
 };

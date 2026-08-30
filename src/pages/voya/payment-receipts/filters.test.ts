@@ -60,17 +60,25 @@ describe('payment receipt records', () => {
     ).toBe(1);
   });
 
-  it('includes a demo rebinding record for reviewing the history UI', () => {
+  it('includes initial binding and multiple rebindings with operators', () => {
     const reboundReceipt = paymentReceipts.find(
       (record) => record.transactionId === 'PAY-20260819-0902',
     );
 
-    expect(reboundReceipt?.bindingHistory).toEqual([
+    expect(reboundReceipt?.bindingHistory).toHaveLength(3);
+    expect(
+      reboundReceipt?.bindingHistory.map((record) => record.action),
+    ).toEqual(['bind', 'rebind', 'rebind']);
+    expect(
+      reboundReceipt?.bindingHistory.every((record) => record.operator),
+    ).toBe(true);
+    expect(reboundReceipt?.bindingHistory.at(-1)).toEqual(
       expect.objectContaining({
-        fromOrderId: 'VO-20260819-0886',
+        fromOrderId: 'VO-20260818-0864',
         toOrderId: 'VO-20260819-0902',
+        operator: 'Nora Liu',
       }),
-    ]);
+    );
   });
 });
 
@@ -124,6 +132,7 @@ describe('payment receipt actions', () => {
       unboundReceipt,
       targetOrder,
       '2026-08-23 11:00',
+      'Nora Liu',
     );
 
     expect(result.orderId).toBe(targetOrder.id);
@@ -133,12 +142,13 @@ describe('payment receipt actions', () => {
       expect.objectContaining({
         fromOrderId: paymentReceipts[0].orderId,
         toOrderId: targetOrder.id,
-        reboundAt: '2026-08-23 11:00',
+        operatedAt: '2026-08-23 11:00',
+        operator: 'Nora Liu',
       }),
     );
   });
 
-  it('does not mark a first-time binding as a rebinding', () => {
+  it('records a first-time binding without a previous order', () => {
     const targetOrder = vehicleOrders[1];
     const result = bindReceiptToOrder(
       {
@@ -149,9 +159,50 @@ describe('payment receipt actions', () => {
       },
       targetOrder,
       '2026-08-23 11:00',
+      'Nora Liu',
     );
 
-    expect(result.bindingHistory).toEqual([]);
+    expect(result.bindingHistory).toEqual([
+      expect.objectContaining({
+        action: 'bind',
+        fromOrderId: undefined,
+        toOrderId: targetOrder.id,
+        operatedAt: '2026-08-23 11:00',
+        operator: 'Nora Liu',
+      }),
+    ]);
+  });
+
+  it('keeps every rebinding operation in chronological order', () => {
+    const firstOrder = vehicleOrders[1];
+    const secondOrder = vehicleOrders[2];
+    const initialReceipt = unbindReceiptFromOrder(paymentReceipts[0]);
+    const firstRebinding = bindReceiptToOrder(
+      initialReceipt,
+      firstOrder,
+      '2026-08-23 11:00',
+      'Leah Chen',
+    );
+    const secondRebinding = bindReceiptToOrder(
+      unbindReceiptFromOrder(firstRebinding),
+      secondOrder,
+      '2026-08-23 11:30',
+      'Nora Liu',
+    );
+
+    expect(secondRebinding.bindingHistory.slice(-2)).toEqual([
+      expect.objectContaining({
+        action: 'rebind',
+        toOrderId: firstOrder.id,
+        operator: 'Leah Chen',
+      }),
+      expect.objectContaining({
+        action: 'rebind',
+        fromOrderId: firstOrder.id,
+        toOrderId: secondOrder.id,
+        operator: 'Nora Liu',
+      }),
+    ]);
   });
 
   it('allows one refund and records its refund time', () => {

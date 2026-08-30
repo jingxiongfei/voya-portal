@@ -130,6 +130,65 @@ export const useVoyaPageStyles = createStyles(({ token, css }) => ({
       grid-template-columns: 1fr;
     }
   `,
+  orderStatusMetrics: css`
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: ${token.marginSM}px;
+    min-inline-size: 0;
+    margin: 0 0 ${token.marginMD}px;
+    padding: 0;
+    border: 0;
+
+    @media (max-width: 1200px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    @media (max-width: 640px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  `,
+  orderStatusMetric: css`
+    display: flex;
+    min-height: 78px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: ${token.paddingSM}px ${token.paddingMD}px;
+    border: 1px solid ${token.colorBorderSecondary};
+    border-radius: ${token.borderRadiusLG}px;
+    color: ${token.colorTextSecondary};
+    background: ${token.colorBgContainer};
+    text-align: start;
+    transition:
+      border-color ${token.motionDurationMid} ${token.motionEaseInOut},
+      background ${token.motionDurationMid} ${token.motionEaseInOut},
+      color ${token.motionDurationMid} ${token.motionEaseInOut},
+      box-shadow ${token.motionDurationMid} ${token.motionEaseInOut};
+
+    &:hover,
+    &:focus-visible {
+      border-color: ${token.colorPrimary};
+      color: ${token.colorPrimary};
+    }
+  `,
+  orderStatusMetricActive: css`
+    border-color: ${token.colorPrimary};
+    color: ${token.colorPrimary};
+    background: ${token.colorPrimaryBg};
+    box-shadow: 0 0 0 1px ${token.colorPrimary};
+  `,
+  orderStatusMetricLabel: css`
+    font-size: ${token.fontSize}px;
+    line-height: ${token.lineHeight};
+  `,
+  orderStatusMetricValue: css`
+    margin-top: ${token.marginXXS}px;
+    color: currentColor;
+    font-size: ${token.fontSizeHeading4}px;
+    font-weight: ${token.fontWeightStrong};
+    line-height: ${token.lineHeightHeading4};
+    font-variant-numeric: tabular-nums;
+  `,
   orderFilterDateRange: css`
     grid-column: span 2;
 
@@ -219,8 +278,8 @@ export const useVoyaPageStyles = createStyles(({ token, css }) => ({
     }
   `,
   receiptBindingHistory: css`
-    min-width: 280px;
-    max-width: 360px;
+    min-width: 320px;
+    max-width: 420px;
   `,
   receiptBindingHistoryItem: css`
     display: flex;
@@ -228,9 +287,18 @@ export const useVoyaPageStyles = createStyles(({ token, css }) => ({
     gap: ${token.marginXXS}px;
   `,
   receiptBindingHistoryRoute: css`
-    display: grid;
-    grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
-    gap: ${token.marginXXS}px ${token.marginSM}px;
+    display: flex;
+    align-items: center;
+    gap: ${token.marginXS}px;
+  `,
+  receiptBindingHistoryArrow: css`
+    color: ${token.colorTextDescription};
+  `,
+  receiptBindingHistoryMeta: css`
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: ${token.marginMD}px;
   `,
   formGrid: css`
     display: grid;
@@ -361,6 +429,88 @@ export const useVoyaPageStyles = createStyles(({ token, css }) => ({
   detailSection: css`
     scroll-margin-top: var(--voya-detail-section-offset, 161px);
   `,
+  procurementFormula: css`
+    display: flex;
+    align-items: stretch;
+    gap: ${token.marginSM}px;
+    min-inline-size: 0;
+    margin: 0;
+    padding: ${token.paddingSM}px ${token.paddingMD}px;
+    border: 0;
+    border-radius: ${token.borderRadiusSM}px;
+    background: ${token.colorFillAlter};
+
+    @media (max-width: 860px) {
+      flex-wrap: wrap;
+    }
+  `,
+  procurementFormulaTerm: css`
+    display: flex;
+    min-width: 150px;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: ${token.marginXXS}px;
+  `,
+  procurementFormulaOperator: css`
+    display: inline-flex;
+    align-items: center;
+    color: ${token.colorTextDescription};
+    font-size: ${token.fontSizeHeading4}px;
+    font-weight: ${token.fontWeightStrong};
+  `,
+  procurementSubsection: css`
+    overflow: hidden;
+    border: 1px solid ${token.colorBorderSecondary};
+    border-radius: ${token.borderRadiusSM}px;
+    background: ${token.colorBgContainer};
+  `,
+  procurementSubsectionHeader: css`
+    display: flex;
+    align-items: center;
+    min-height: ${token.controlHeight}px;
+    padding-inline: ${token.paddingSM}px;
+    border-bottom: 1px solid ${token.colorBorderSecondary};
+    background: ${token.colorFillAlter};
+    font-weight: ${token.fontWeightStrong};
+  `,
+  procurementSubsectionBody: css`
+    padding: ${token.paddingSM}px;
+  `,
+  procurementVehicleLayout: css`
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    align-items: start;
+    gap: ${token.marginMD}px;
+
+    @media (max-width: 760px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  `,
+  procurementVehicleFigure: css`
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: ${token.marginXXS}px;
+    margin: 0;
+
+    figcaption {
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      align-items: flex-start;
+
+      figcaption {
+        width: 232px;
+      }
+    }
+  `,
+  procurementVehicleDetails: css`
+    min-width: 0;
+  `,
+  orderSummaryMeta: css`
+    min-width: 0;
+  `,
   amountSummary: css`
     min-width: 180px;
     text-align: right;
@@ -377,16 +527,6 @@ export const useVoyaPageStyles = createStyles(({ token, css }) => ({
     font-size: ${token.fontSizeLG}px;
     line-height: ${token.lineHeightLG};
     font-variant-numeric: tabular-nums;
-  `,
-  couponRecord: css`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: ${token.marginSM}px;
-    flex-wrap: wrap;
-    padding: ${token.paddingXS}px ${token.paddingSM}px;
-    border-radius: ${token.borderRadiusSM}px;
-    background: ${token.colorFillAlter};
   `,
   routeStops: css`
     display: flex;
